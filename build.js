@@ -85,16 +85,28 @@ async function main() {
         'researchBlogs': data.researchBlogs
     };
 
-    for (const cat of categories) {
-        console.log(`Generating briefing for ${cat}...`);
-        // data.briefings[cat] = await generateBriefing(cat, dataKeys[cat]);
-        // Sequential to avoid rate limits? Or parallel?
-        // DeepSeek might have rate limits. Sequential is safer.
+    console.log('Generating briefings (parallel)...');
+
+    // Launch all briefing requests in parallel
+    const briefingPromises = categories.map(async (cat) => {
+        console.log(`> Requesting briefing for ${cat}...`);
         try {
             const briefing = await generateBriefing(cat, dataKeys[cat]);
-            if (briefing) data.briefings[cat] = briefing;
+            return { cat, briefing };
         } catch (e) {
-            console.error(e);
+            console.error(`Error generating briefing for ${cat}:`, e.message);
+            return { cat, briefing: null };
+        }
+    });
+
+    // Await all results
+    const results = await Promise.all(briefingPromises);
+
+    // Store results
+    for (const res of results) {
+        if (res.briefing) {
+            data.briefings[res.cat] = res.briefing;
+            console.log(`✓ Received briefing for ${res.cat}`);
         }
     }
 
