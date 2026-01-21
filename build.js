@@ -123,6 +123,10 @@ async function main() {
     fsNative.writeFileSync(dailyPath, htmlContent);
     console.log(`Generated ${dailyFilename}`);
 
+    // Generate history.json (Source of truth for frontend)
+    fsNative.writeFileSync(path.join(DIST_DIR, 'history.json'), JSON.stringify(historyFiles, null, 2));
+    console.log('Generated history.json');
+
     // 4. Generate App Shell (index.html)
     // The shell points to the latest daily report
     const shellContent = generateShell(dailyFilename, historyFiles);
