@@ -2,7 +2,7 @@ require('dotenv').config();
 const fsNative = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { fetchAllSources } = require('./src/fetchers');
+const { fetchSource, SOURCE_KEYS } = require('./src/fetchers');
 const { generateHTML, generateShell } = require('./src/template');
 
 // Ensure dist exists
@@ -14,8 +14,7 @@ if (!fsNative.existsSync(DIST_DIR)) {
 async function generateBriefing(category, items) {
     if (!items || items.length === 0) return null;
 
-    // DeepSeek API or Gemini? Plan says DeepSeek in text, Google in deps.
-    // Key available: DEEPSEEK_API_KEY.
+    // DeepSeek API
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
         console.warn('Skipping briefing: No DEEPSEEK_API_KEY');
@@ -45,7 +44,7 @@ Output directly in Markdown.
 
     try {
         const response = await axios.post('https://api.deepseek.com/chat/completions', {
-            model: "deepseek-reasoner", // User specified this model
+            model: "deepseek-reasoner",
             messages: [
                 { role: "system", content: "You are a helpful AI news assistant." },
                 { role: "user", content: prompt }
@@ -68,47 +67,39 @@ Output directly in Markdown.
 async function main() {
     console.log('Starting AI Pulse Build...');
 
-    // 1. Fetch Data
-    const data = await fetchAllSources();
-
-    // 2. Generate Briefings
-    data.briefings = {};
-    const categories = ['hn', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
-    // Map data keys
-    const dataKeys = {
-        'hn': data.hnStories,
-        'hfPapers': data.hfPapers,
-        'hfBlog': data.hfBlog,
-        'productHunt': data.productHunt,
-        'reddit': data.reddit,
-        'youtube': data.youtube,
-        'researchBlogs': data.researchBlogs
+    const data = {
+        timestamp: new Date().toISOString(),
+        briefings: {}
     };
 
-    console.log('Generating briefings (parallel)...');
+    console.log('Starting Parallel Pipeline (Fetch + Briefing)...');
 
-    // Launch all briefing requests in parallel
-    const briefingPromises = categories.map(async (cat) => {
-        console.log(`> Requesting briefing for ${cat}...`);
+    // Pipeline: For each source, fetch -> store -> brief
+    const pipelinePromises = SOURCE_KEYS.map(async (key) => {
         try {
-            const briefing = await generateBriefing(cat, dataKeys[cat]);
-            return { cat, briefing };
+            // 1. Fetch
+            const items = await fetchSource(key);
+
+            // 2. Map to data object
+            if (key === 'hn') {
+                data.hnStories = items;
+            } else {
+                data[key] = items;
+            }
+
+            // 3. Generate Briefing
+            console.log(`> Generating briefing for ${key}...`);
+            const briefing = await generateBriefing(key, items);
+            if (briefing) {
+                data.briefings[key] = briefing;
+                console.log(`✓ Pipeline finished for ${key}`);
+            }
         } catch (e) {
-            console.error(`Error generating briefing for ${cat}:`, e.message);
-            return { cat, briefing: null };
+            console.error(`Pipeline failed for ${key}:`, e.message);
         }
     });
 
-    // Await all results
-    const results = await Promise.all(briefingPromises);
-
-    // Store results
-    for (const res of results) {
-        if (res.briefing) {
-            data.briefings[res.cat] = res.briefing;
-            console.log(`✓ Received briefing for ${res.cat}`);
-        }
-    }
+    await Promise.all(pipelinePromises);
 
     // 3. Generate Daily HTML
     const now = new Date();

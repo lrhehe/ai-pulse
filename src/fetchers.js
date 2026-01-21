@@ -194,46 +194,25 @@ async function fetchRSS(feedUrl, sourceName, baseScore) {
     }
 }
 
-async function fetchAllSources() {
-    console.log('Fetching Hacker News...');
-    const hnStories = await fetchHackerNews();
-
-    const fetchCategory = async (categoryKey) => {
-        if (!RSS_FEEDS[categoryKey]) return [];
-        const results = await Promise.all(
-            RSS_FEEDS[categoryKey].map(feed => fetchRSS(feed.url, feed.name, feed.baseScore))
-        );
-        return results.flat();
-    };
-
-    console.log('Fetching HF Papers...');
-    const hfPapers = await fetchCategory('hfPapers');
-
-    console.log('Fetching HF Blog...');
-    const hfBlog = await fetchCategory('hfBlog');
-
-    console.log('Fetching Product Hunt...');
-    const productHunt = await fetchCategory('productHunt');
-
-    console.log('Fetching Reddit...');
-    const reddit = await fetchCategory('reddit');
-
-    console.log('Fetching YouTube...');
-    const youtube = await fetchCategory('youtube');
-
-    console.log('Fetching Research Blogs...');
-    const researchBlogs = await fetchCategory('researchBlogs');
-
-    return {
-        timestamp: new Date().toISOString(),
-        hnStories,
-        hfPapers,
-        hfBlog,
-        productHunt,
-        reddit,
-        youtube,
-        researchBlogs
-    };
+async function fetchCategory(categoryKey) {
+    if (!RSS_FEEDS[categoryKey]) return [];
+    console.log(`> Fetching ${categoryKey}...`);
+    const results = await Promise.all(
+        RSS_FEEDS[categoryKey].map(feed => fetchRSS(feed.url, feed.name, feed.baseScore))
+    );
+    console.log(`✓ Fetched ${categoryKey}`);
+    return results.flat();
 }
 
-module.exports = { fetchAllSources };
+async function fetchSource(key) {
+    if (key === 'hn') {
+        const data = await fetchHackerNews();
+        console.log('✓ Fetched Hacker News');
+        return data;
+    }
+    return fetchCategory(key);
+}
+
+const SOURCE_KEYS = ['hn', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
+
+module.exports = { fetchSource, SOURCE_KEYS };
