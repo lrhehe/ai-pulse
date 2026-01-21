@@ -238,22 +238,54 @@ function generateHTML(data, history = []) {
 
         /* Category Briefing */
         .category-briefing {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(139, 92, 246, 0.05); /* Lighter bg */
+            border: 1px solid rgba(139, 92, 246, 0.2);
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin-bottom: 2rem;
-            border-left: 4px solid var(--accent-primary);
+            /* border-left: 4px solid var(--accent-primary); Removed for cleaner look */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
         
-        .category-briefing h3, .category-briefing h4 { 
+        .category-briefing h3 { 
             color: var(--accent-secondary); 
-            margin-top: 1rem; 
-            margin-bottom: 0.5rem; 
-            font-size: 1.1rem;
+            margin-top: 1.5rem; 
+            margin-bottom: 0.75rem; 
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
         }
         .category-briefing h3:first-child { margin-top: 0; }
-        .category-briefing p { color: var(--text-secondary); margin-bottom: 0.75rem; }
-        .category-briefing strong { color: var(--text-primary); }
+        
+        .category-briefing p { 
+            color: var(--text-secondary); 
+            margin-bottom: 0.75rem; 
+            line-height: 1.7;
+        }
+        
+        .category-briefing strong { 
+            color: var(--text-primary); 
+            font-weight: 600;
+        }
+
+        .category-briefing ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .category-briefing li { margin-bottom: 0.5rem; }
+
+        .category-briefing hr {
+            border: 0;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 1.5rem 0;
+        }
 
         .tab-nav {
             display: flex;

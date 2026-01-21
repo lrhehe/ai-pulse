@@ -21,25 +21,27 @@ async function generateBriefing(category, items) {
         return null;
     }
 
-    const titles = items.slice(0, 10).map(i => `- ${i.title} (${i.source})`).join('\n');
     const prompt = `
-You are an AI News Editor. Summarize the following top stories for the category "${category}". 
-For each story (or cluster of stories), provide a structured briefing:
+You are an AI News Editor. Summarize the top 3-5 most important stories for the category "${category}" from the list below.
+Cluster related stories together.
 
-1. **Title** (Translated to Chinese if needed)
-2. **Technical Significance** (What is the technical breakthrough?)
-3. **Why it matters** (Impact on the field or industry)
+For each story/cluster, provide a briefing in this specific format:
 
-Format as Markdown bullet points. 
-- Use Chinese for the content.
-- Be concise and insight-driven.
-- Filter out low-quality or irrelevant items (Critique: Only include items with high technical value).
+### 🔹 [Title of the Story/Trend in Chinese]
+**💡 Technical Significance**: [Concise explaination of the breakthrough or tech details in Chinese]
+**🚀 Why it Matters**: [Impact on industry/research in Chinese]
+
+---
+
+**Output Rules:**
+- ONLY output the Markdown content.
+- Use the emojis as shown.
+- Keep it professional but easy to scan.
+- If stories are low quality, pick only the best 1 or 2.
 
 Category: ${category}
 Stories:
 ${titles}
-
-Output directly in Markdown.
 `;
 
     try {
