@@ -21,6 +21,7 @@ async function generateBriefing(category, items) {
         return null;
     }
 
+    const titles = items.slice(0, 10).map(i => `- ${i.title} (${i.source})`).join('\n');
     const prompt = `
 You are an AI News Editor. Summarize the top 3-5 most important stories for the category "${category}" from the list below.
 Cluster related stories together.
@@ -76,32 +77,52 @@ async function main() {
 
     console.log('Starting Parallel Pipeline (Fetch + Briefing)...');
 
-    // Pipeline: For each source, fetch -> store -> brief
-    const pipelinePromises = SOURCE_KEYS.map(async (key) => {
-        try {
-            // 1. Fetch
-            const items = await fetchSource(key);
+    // Pipeline: Process sources with limited concurrency (2 at a time) to avoid network/API limits
+    const CONCURRENCY_LIMIT = 3;
+    const results = [];
 
-            // 2. Map to data object
-            if (key === 'hn') {
-                data.hnStories = items;
-            } else {
-                data[key] = items;
+    // Helper for chunking
+    const chunkArray = (arr, size) =>
+        arr.length > size
+            ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)]
+            : [arr];
+
+    const batches = chunkArray(SOURCE_KEYS, CONCURRENCY_LIMIT);
+
+    for (const batch of batches) {
+        console.log(`Processing batch: ${batch.join(', ')}`);
+        await Promise.all(batch.map(async (key) => {
+            try {
+                // 1. Fetch
+                const items = await fetchSource(key);
+                if (!items || items.length === 0) {
+                    console.warn(`⚠️ No items found for ${key}. Skipping briefing.`);
+                    return;
+                }
+
+                // 2. Map to data object
+                if (key === 'hn') {
+                    data.hnStories = items;
+                } else {
+                    data[key] = items;
+                }
+
+                // 3. Generate Briefing
+                console.log(`> Generating briefing for ${key} (${items.length} items)...`);
+                const briefing = await generateBriefing(key, items);
+                if (briefing) {
+                    data.briefings[key] = briefing;
+                    console.log(`✓ Briefing created for ${key}`);
+                } else {
+                    console.warn(`⚠️ Briefing generation returned null for ${key}`);
+                }
+            } catch (e) {
+                console.error(`Pipeline failed for ${key}:`, e.message);
             }
+        }));
+    }
 
-            // 3. Generate Briefing
-            console.log(`> Generating briefing for ${key}...`);
-            const briefing = await generateBriefing(key, items);
-            if (briefing) {
-                data.briefings[key] = briefing;
-                console.log(`✓ Pipeline finished for ${key}`);
-            }
-        } catch (e) {
-            console.error(`Pipeline failed for ${key}:`, e.message);
-        }
-    });
 
-    await Promise.all(pipelinePromises);
 
     // 3. Generate Daily HTML
     const now = new Date();
