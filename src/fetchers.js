@@ -194,6 +194,60 @@ async function fetchRSS(feedUrl, sourceName, baseScore) {
     }
 }
 
+async function fetchGitHubTrending() {
+    try {
+        console.log('> Fetching GitHub Trending...');
+        const { data: html } = await fetchWithRetry('https://github.com/trending', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'
+            }
+        });
+
+        const $ = cheerio.load(html);
+        const repos = [];
+
+        $('.Box-row').each((i, el) => {
+            const title = $(el).find('h2 a').text().replace(/\s+/g, '').trim();
+            const link = 'https://github.com' + $(el).find('h2 a').attr('href');
+            const description = $(el).find('p').text().trim();
+            const stars = $(el).find('a.Link--muted').first().text().trim();
+
+            // Check if title or description matches AI keywords
+            const textToCheck = (title + ' ' + description).toLowerCase();
+            const isAI = HN_KEYWORDS.some(k => textToCheck.includes(k.toLowerCase()));
+
+            if (isAI) {
+                repos.push({
+                    title: title,
+                    title_zh: '', // Will be filled by briefing logic or left as is
+                    link: link,
+                    source: 'GitHub Trending',
+                    date: new Date().toISOString(),
+                    snippet: description,
+                    snippet_zh: '',
+                    importance: 85, // Higher fixed importance for trending repos
+                    stars: stars
+                });
+            }
+        });
+
+        // Translate titles and descriptions for GitHub repos
+        const enriched = await Promise.all(repos.map(async (repo) => {
+            return {
+                ...repo,
+                title_zh: await translateText(repo.title),
+                snippet_zh: await translateText(repo.snippet)
+            };
+        }));
+
+        console.log(`✓ Fetched GitHub Trending (${enriched.length} AI repos found)`);
+        return enriched;
+    } catch (error) {
+        console.error('Error fetching GitHub Trending:', error.message);
+        return [];
+    }
+}
+
 async function fetchCategory(categoryKey) {
     if (!RSS_FEEDS[categoryKey]) return [];
     console.log(`> Fetching ${categoryKey}...`);
@@ -210,9 +264,12 @@ async function fetchSource(key) {
         console.log('✓ Fetched Hacker News');
         return data;
     }
+    if (key === 'github') {
+        return fetchGitHubTrending();
+    }
     return fetchCategory(key);
 }
 
-const SOURCE_KEYS = ['hn', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
+const SOURCE_KEYS = ['hn', 'github', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
 
 module.exports = { fetchSource, SOURCE_KEYS };

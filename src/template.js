@@ -452,6 +452,7 @@ function generateHTML(data, history = []) {
 
     <nav class="tab-nav">
         <button class="tab-btn active" onclick="openTab('tab-hn')">Hacker News</button>
+        <button class="tab-btn" onclick="openTab('tab-github')">GitHub Trending</button>
         <button class="tab-btn" onclick="openTab('tab-hfPapers')">HF Papers</button>
         <button class="tab-btn" onclick="openTab('tab-hfBlog')">HF Blog</button>
         <button class="tab-btn" onclick="openTab('tab-productHunt')">Product Hunt</button>
@@ -463,6 +464,10 @@ function generateHTML(data, history = []) {
     <main>
         <div id="tab-hn" class="tab-content active">
             ${renderSection('Hacker News', data.hnStories, 'hn', 'https://news.ycombinator.com', data.briefings?.hn)}
+        </div>
+
+        <div id="tab-github" class="tab-content">
+            ${renderSection('GitHub Trending', data.github, 'github', 'https://github.com/trending', data.briefings?.github)}
         </div>
 
         <div id="tab-hfPapers" class="tab-content">
