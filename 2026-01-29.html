@@ -1,0 +1,2911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Report</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #06b6d4;
+            --fire-color: #f59e0b;
+            --gradient: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            --tab-active-bg: rgba(139, 92, 246, 0.2);
+            --tab-hover-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 3rem;
+            /* Scrollbar for iframe content */
+            overflow-y: auto; 
+        }
+
+        /* HEADER HIDDEN LOGIC */
+        /* By default header is shown (direct visit), hidden if embedded */
+        body.embedded header {
+            display: none !important;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .timestamp { font-size: 0.875rem; color: var(--text-secondary); }
+
+        /* Category Briefing */
+        .category-briefing {
+            background: rgba(139, 92, 246, 0.05); /* Lighter bg */
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            /* border-left: 4px solid var(--accent-primary); Removed for cleaner look */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-briefing h3 { 
+            color: var(--accent-secondary); 
+            margin-top: 1.5rem; 
+            margin-bottom: 0.75rem; 
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
+        }
+        .category-briefing h3:first-child { margin-top: 0; }
+        
+        .category-briefing p { 
+            color: var(--text-secondary); 
+            margin-bottom: 0.75rem; 
+            line-height: 1.7;
+        }
+        
+        .category-briefing strong { 
+            color: var(--text-primary); 
+            font-weight: 600;
+        }
+
+        .category-briefing ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .category-briefing li { margin-bottom: 0.5rem; }
+
+        .category-briefing hr {
+            border: 0;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 1.5rem 0;
+        }
+
+        .tab-nav {
+            display: flex;
+            overflow-x: auto;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            scrollbar-width: none;
+            background: var(--bg-color); 
+            /* Sticky tabs under the (potentially hidden) header */
+            position: sticky;
+            top: 0; 
+            z-index: 90;
+        }
+        body:not(.embedded) .tab-nav {
+             top: 80px; /* Offset if header is present */
+        }
+
+        .tab-nav::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            white-space: nowrap;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--tab-hover-bg);
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: var(--tab-active-bg);
+            border-color: var(--accent-primary);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        
+        .section-header { display: none; }
+
+        .grid { 
+            display: grid; 
+            gap: 1.5rem; 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
+            border-color: rgba(139, 92, 246, 0.3);
+            background: #233045;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .card-source {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-secondary);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-score {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+        }
+
+        .content-block { display: flex; flex-direction: column; gap: 0.25rem; }
+
+        .card-title { font-size: 1rem; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+        .card-title-zh { font-size: 0.95rem; font-weight: 400; color: var(--text-secondary); line-height: 1.5; }
+
+        .card-meta { font-size: 0.75rem; color: var(--text-tertiary); margin-top: -0.25rem; }
+
+        .snippet-block { 
+            background: rgba(0,0,0,0.2); 
+            padding: 0.75rem; 
+            border-radius: 0.5rem; 
+            border-left: 2px solid var(--text-tertiary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .card-snippet { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+        .card-snippet-zh { font-size: 0.85rem; color: var(--text-tertiary); line-height: 1.5; font-style: italic; }
+
+        .badge {
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.2rem;
+            font-size: 0.65rem;
+            color: #fff;
+        }
+        .badge.fire { background: var(--fire-color); }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.02);
+            border-radius: 1rem;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease-out backwards; }
+
+        @media (max-width: 768px) {
+            main { grid-template-columns: 1fr; }
+            .tab-nav { padding: 1rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header is present but may be hidden via JS class if embedded -->
+    <header>
+        <div class="header-left">
+            <div class="logo">AI Pulse <span style="font-size:0.8em; font-weight:400; opacity:0.7">Report</span></div>
+        </div>
+        <div class="timestamp">Generated: 1/29/2026, 8:02:20 AM</div>
+    </header>
+
+    <nav class="tab-nav">
+        <button class="tab-btn active" onclick="openTab('tab-hn')">Hacker News</button>
+        <button class="tab-btn" onclick="openTab('tab-github')">GitHub Trending</button>
+        <button class="tab-btn" onclick="openTab('tab-hfPapers')">HF Papers</button>
+        <button class="tab-btn" onclick="openTab('tab-hfBlog')">HF Blog</button>
+        <button class="tab-btn" onclick="openTab('tab-productHunt')">Product Hunt</button>
+        <button class="tab-btn" onclick="openTab('tab-researchBlogs')">Research Blogs</button>
+        <button class="tab-btn" onclick="openTab('tab-reddit')">Reddit</button>
+        <button class="tab-btn" onclick="openTab('tab-youtube')">YouTube</button>
+    </nav>
+
+    <main>
+        <div id="tab-hn" class="tab-content active">
+            
+        <section>
+            <h2 class="section-header"><a href="https://news.ycombinator.com" target="_blank" class="section-link">Hacker News</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 特斯拉利润暴跌与IBM大型机业务激增：科技巨头两极分化</h3>
+<p><strong>💡 技术意义</strong>：特斯拉面临销售额下滑与AI投资高昂的双重压力，而IBM大型机业务因可靠性与关键任务处理需求增长67%，形成新旧技术路线的鲜明对比。
+<strong>🚀 影响与意义</strong>：凸显了企业在激进AI转型与传统稳健基建之间的战略选择，反映市场对算力可靠性和成本的不同偏好，可能影响未来基础设施投资方向。</p>
+<hr>
+<h3>🔹 LLM透明化工具与开源AI政策兴起</h3>
+<p><strong>💡 技术意义</strong>：出现了可监控LLM工具网络传输的中间人代理工具；同时Jellyfin明确了拒绝封闭“黑箱”AI、坚持开源可审计的开发政策。
+<strong>🚀 影响与意义</strong>：反映开发者社区对AI透明度和数据隐私的强烈需求，推动开源AI工具链发展，可能促使企业级AI服务提高可解释性。</p>
+<hr>
+<h3>🔹 英国政府高价收购书签网站引发争议</h3>
+<p><strong>💡 技术意义</strong>：英国政府以410万英镑收购名为“OneLogin”的书签导航网站，其技术本质相对简单。
+<strong>🚀 影响与意义</strong>：引发对政府数字化采购成本效益的质疑，反映了公共部门数字化转型过程中可能存在的资源错配问题。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://mahadk.com/posts/ai-skills-hub" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">72</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">The UK paid £4.1M for a bookmarks site</h3>
+                <h4 class="card-title-zh">英国为一书签网站支付了410万英镑。</h4>
+            </div>
+
+            <div class="card-meta">about 1 hour ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Or, as they like to call it, the 'AI Skills Hub'. Which was built by PwC because of course it was</div>
+                <div class="card-snippet-zh">或者，正如他们喜欢称呼的那样，这个“AI技能中心”。它由普华永道（PwC）打造，这当然不足为奇。</div>
+            </div>
+        </a>
+    
+        <a href="https://ciechanow.ski/airfoil/" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Airfoil (2024)</h3>
+                <h4 class="card-title-zh">翼型（2024）</h4>
+            </div>
+
+            <div class="card-meta">about 10 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Interactive article explaining the physics of an airfoil and what makes airplanes fly</div>
+                <div class="card-snippet-zh">互动文章：解析机翼的物理原理与飞机如何翱翔天际</div>
+            </div>
+        </a>
+    
+        <a href="https://github.com/jmuncor/sherlock" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Show HN: A MitM proxy to see what your LLM tools are sending</h3>
+                <h4 class="card-title-zh">Show HN：一款用于监控LLM工具数据传输的中间人代理</h4>
+            </div>
+
+            <div class="card-meta">about 5 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Intercept LLM API traffic and visualize token usage in a real-time terminal dashboard. Track costs,       debug prompts, and monitor context window usage across your AI development sessions.       - GitHub - jmuncor/sherlock: Intercept LLM API traffic and visualize token usage in a real-time termina</div>
+                <div class="card-snippet-zh">拦截LLM API流量，在实时终端仪表盘中可视化令牌使用情况。追踪成本、调试提示词，并监控AI开发会话中的上下文窗口使用情况。- GitHub - jmuncor/sherlock：拦截LLM API流量，在实时终端中可视化令牌使用情况。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.mcsweeneys.net/articles/please-dont-say-mean-things-about-the-ai-that-i-just-invested-a-billion-dollars-in" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">20</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Please Don't Say Mean Things about the AI I Just Invested a Billion Dollars In</h3>
+                <h4 class="card-title-zh">请别对我刚投资百亿的AI出言不逊。</h4>
+            </div>
+
+            <div class="card-meta">28 minutes ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">“[Nvidia CEO] Jensen Huang Is Begging You to Stop Being So Negative About AI” — Headline from Gizmodo
+- - —
+Guys, enough is enough. Bullying is a s...</div>
+                <div class="card-snippet-zh">够了，伙计们。霸凌行为真是...</div>
+            </div>
+        </a>
+    
+        <a href="https://jellyfin.org/docs/general/contributing/llm-policies/" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Jellyfin LLM/"AI" Development Policy</h3>
+                <h4 class="card-title-zh">Jellyfin LLM/"AI"开发政策</h4>
+            </div>
+
+            <div class="card-meta">about 2 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">The rise of LLMs as a useful development tool over the last year or so has been significant. The power and flexibility of tools like Claude Code and ChatGPT have given a lot of functionality both to experienced developers and new developers alike. But there are trade-offs.</div>
+                <div class="card-snippet-zh">过去一年左右，大型语言模型作为实用开发工具的崛起意义重大。Claude Code和ChatGPT等工具的强大功能与灵活性，为经验丰富的开发者和新手开发者都提供了丰富的功能。但这其中也存在权衡取舍。</div>
+            </div>
+        </a>
+    
+        <a href="https://danq.me/2026/01/28/hsbc-dont-understand-email/" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">That's not how email works</h3>
+                <h4 class="card-title-zh">电子邮件不是这样运作的。</h4>
+            </div>
+
+            <div class="card-meta">about 6 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">A confusing letter from HSBC informed me that I've not been receiving their emails, and I have to change the email address they use to contact me. Except I've been receiving all of their emails just fine! The problem, it turns out, is that surveillance capitalism is now so-widespread that the bank c</div>
+                <div class="card-snippet-zh">一封来自汇丰银行的令人困惑的信件通知我，一直未能收到他们的电子邮件，因此必须更改他们联系我时使用的邮箱地址。可实际上，我明明一直都能正常收到他们的所有邮件！问题的根源在于，监控资本主义如今已如此普遍，以至于银行也...</div>
+            </div>
+        </a>
+    
+        <a href="https://newsroom.ibm.com/2026-01-28-IBM-RELEASES-FOURTH-QUARTER-RESULTS" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">32</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">IBM Mainframe Business Jumps 67%</h3>
+                <h4 class="card-title-zh">IBM大型机业务激增67%</h4>
+            </div>
+
+            <div class="card-meta">about 2 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">IBM today announced fourth-quarter 2025 earnings results.</div>
+                <div class="card-snippet-zh">IBM今日公布2025年第四季度财报。</div>
+            </div>
+        </a>
+    
+        <a href="https://carlkolon.com/2026/01/27/jfmm-semantic-search/" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">14</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Tuning Semantic Search on JFMM.net – Joint Fleet Maintenance Manual</h3>
+                <h4 class="card-title-zh">在JFMM.net上优化语义搜索——联合舰队维护手册</h4>
+            </div>
+
+            <div class="card-meta">about 9 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Building a web app to search the Joint Fleet Maintenance Manual.</div>
+                <div class="card-snippet-zh">构建一个用于搜索《联合舰队维护手册》的网络应用程序。</div>
+            </div>
+        </a>
+    
+        <a href="https://writings.stephenwolfram.com/2023/03/will-ais-take-all-our-jobs-and-end-human-history-or-not-well-its-complicated/" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Will AIs take all our jobs and end human history, or not? (2023)</h3>
+                <h4 class="card-title-zh">人工智能会取代所有工作并终结人类历史吗？（2023）</h4>
+            </div>
+
+            <div class="card-meta">about 7 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Stephen Wolfram explores some of the science, technology and philosophy of what we can expect from AIs. From how ChatGPT works to the cycle of technology, to the concept of progress and preparing for an AI world.</div>
+                <div class="card-snippet-zh">斯蒂芬·沃尔夫拉姆探讨了从AI发展中我们能期待的科学、技术与哲学议题，涵盖ChatGPT的工作原理、技术演进周期、进步理念，以及如何为AI时代做好准备。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.axios.com/2026/01/28/tesla-earnings-elon-musk-ai" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">35</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Tesla profit plunges as sales fall and AI expenses pile up</h3>
+                <h4 class="card-title-zh">特斯拉利润骤降，销量下滑叠加AI支出激增</h4>
+            </div>
+
+            <div class="card-meta">about 2 hours ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.kairos.computer/" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">55</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Kairos: AI interns for everyone</h3>
+                <h4 class="card-title-zh">Kairos：人人可享的AI实习生</h4>
+            </div>
+
+            <div class="card-meta">about 16 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Talk to it like a person. It works like one too. Kairos automates complex workflows with a dedicated browser, 20+ app integrations, and runs while you are away.</div>
+                <div class="card-snippet-zh">像与人交谈一样与它沟通。它的运作也如同真人。Kairos通过专用浏览器、20多种应用集成实现复杂工作流程自动化，并在您离开时持续运行。</div>
+            </div>
+        </a>
+    
+        <a href="https://github.com/trycua/cua" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">46</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Show HN: Cua-Bench – a benchmark for AI agents in GUI environments</h3>
+                <h4 class="card-title-zh">Show HN：Cua-Bench——面向图形用户界面环境中AI智能体的基准测试平台</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Open-source infrastructure for Computer-Use Agents. Sandboxes, SDKs, and benchmarks to train and evaluate AI agents that can control full desktops (macOS, Linux, Windows). - trycua/cua</div>
+                <div class="card-snippet-zh">计算机使用智能体的开源基础设施。提供沙盒环境、软件开发工具包（SDK）及基准测试，用于训练和评估能够操控完整桌面系统（macOS、Linux、Windows）的人工智能体。 - trycua/cua</div>
+            </div>
+        </a>
+    
+        <a href="https://allenai.org/blog/open-coding-agents" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">100</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AI2: Open Coding Agents</h3>
+                <h4 class="card-title-zh">AI2：开放编码智能体</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">SERA is the first in our family of Open Coding Agents, achieving state-of-the-art performance at low cost.</div>
+                <div class="card-snippet-zh">SERA是我们开源编码智能体家族的首个成员，以低成本实现了业界领先的性能表现。</div>
+            </div>
+        </a>
+    
+        <a href="https://auth-auth.vercel.app/" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">23</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Show HN: I'm building an AI-proof writing tool. How would you defeat it?</h3>
+                <h4 class="card-title-zh">HN展示：我正在打造一款防AI写作工具。你会如何破解它？</h4>
+            </div>
+
+            <div class="card-meta">about 6 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Generated by create next app</div>
+                <div class="card-snippet-zh">由 create-next-app 生成。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.space.com/space-exploration/human-spaceflight/40-years-after-the-space-shuttle-challenger-disaster-spaceflight-remains-far-from-routine" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">10</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">40 years after the Challenger disaster, spaceflight remains far from routine</h3>
+                <h4 class="card-title-zh">挑战者号灾难过去40年后，太空飞行仍远未实现常态化。</h4>
+            </div>
+
+            <div class="card-meta">about 3 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Seven astronauts lost their lives during the Challenger space shuttle disaster on Jan. 28, 1986. Four decades later, human spaceflight remains a difficult business.</div>
+                <div class="card-snippet-zh">1986年1月28日，挑战者号航天飞机失事导致七名宇航员丧生。四十年过去，载人航天依然是一项充满挑战的事业。</div>
+            </div>
+        </a>
+    
+        <a href="https://dev.mkn.us/world.html" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">5</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Had LLM/AI build an unbiased quiz: Where in the World Should I Live?</h3>
+                <h4 class="card-title-zh">让LLM/AI构建一个无偏见的测验：我该住在世界何处？</h4>
+            </div>
+
+            <div class="card-meta">about 6 hours ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.federalreserve.gov/newsevents/pressreleases/monetary20260128a.htm" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">29</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Feds maintain 3.5 – 3.75% rate</h3>
+                <h4 class="card-title-zh">美联储维持3.5%至3.75%利率不变。</h4>
+            </div>
+
+            <div class="card-meta">about 4 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet"> Available indicators suggest that economic activity has been expanding at a solid pace. Job gains have remained low, and the unemployment rate has shown some s</div>
+                <div class="card-snippet-zh">现有指标显示，经济活动正以稳健的步伐扩张。就业增长持续低迷，失业率已出现一定程度的上升。</div>
+            </div>
+        </a>
+    
+        <a href="https://blog.google/products-and-platforms/products/chrome/gemini-3-auto-browse/" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">Hacker News </div>
+                <div class="card-score" title="Importance Score">15</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">The new era of browsing: Putting Gemini to work in Chrome</h3>
+                <h4 class="card-title-zh">浏览新纪元：让Gemini在Chrome中发挥作用</h4>
+            </div>
+
+            <div class="card-meta">about 6 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Learn more about new agentic capabilities coming to Chrome, powered by Gemini 3.</div>
+                <div class="card-snippet-zh">深入了解即将登陆Chrome的全新智能体功能，由Gemini 3驱动。</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-github" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://github.com/trending" target="_blank" class="section-link">GitHub Trending</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 AI 基础设施与工具的新进展</h3>
+<p><strong>💡 Technical Significance</strong>: 本次趋势包含两个重要的AI基础设施项目：<code>NevaMind-AI/memU</code> 是一个开源向量内存系统，旨在为AI智能体提供高效的记忆管理能力；<code>MoonshotAI/kimi-cli</code> 则是月之暗面推出的Kimi AI的官方命令行工具，使开发者能够便捷地在终端集成其长文本处理能力。
+<strong>🚀 Why it Matters</strong>: 这些工具降低了开发AI应用和智能体的门槛，<code>memU</code>有望增强AI的持续学习和上下文理解能力，而<code>kimi-cli</code>则将强大的长上下文模型带入工作流，共同推动AI代理和自动化工具的普及与应用创新。</p>
+<hr>
+<h3>🔹 AI 系统提示词安全泄露</h3>
+<p><strong>💡 Technical Significance</strong>: 项目 <code>asgeirtj/system_prompts_leaks</code> 系统地收集并披露了从各种AI服务和应用中泄露的“系统提示词”（System Prompts）。这些提示词是引导AI模型行为的核心指令，通常被开发者视为商业秘密或关键配置。
+<strong>🚀 Why it Matters</strong>: 大规模的系统提示词泄露暴露了当前AI应用在安全设计上的普遍脆弱性。这为研究AI安全性、提示词工程以及模型逆向工程提供了宝贵的数据集，同时也为AI服务提供商敲响了警钟，亟需加强核心知识产权的保护措施。</p>
+<hr>
+<h3>🔹 面向树莓派的 C 语言编译器</h3>
+<p><strong>💡 Technical Significance</strong>: 项目 <code>badlogic/pi-mono</code> 是一个专为树莓派（Raspberry Pi）从零开始编写的C语言编译器和工具链。它不依赖传统的GCC或LLVM，旨在提供更轻量、高效且针对特定硬件优化的编译体验。
+<strong>🚀 Why it Matters</strong>: 在嵌入式开发和教育领域，一个简洁、透明的专用工具链具有重要价值。它不仅能帮助开发者更深入地理解编译原理与硬件协作，还能为特定场景（如性能极端受限或教学）提供高度定制化的解决方案，体现了底层系统软件的创新活力。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://github.com/badlogic/pi-mono" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">GitHub Trending </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">badlogic/pi-mono</h3>
+                
+            </div>
+
+            <div class="card-meta">2 minutes ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">AI agent toolkit: coding agent CLI, unified LLM API, TUI & web UI libraries, Slack bot, vLLM pods</div>
+                <div class="card-snippet-zh">AI智能体工具包：编码代理命令行界面、统一大语言模型API、终端用户界面与网页界面库、Slack机器人、vLLM容器组</div>
+            </div>
+        </a>
+    
+        <a href="https://github.com/asgeirtj/system_prompts_leaks" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">GitHub Trending </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">asgeirtj/system_prompts_leaks</h3>
+                <h4 class="card-title-zh">asgeirtj/系统提示词泄露</h4>
+            </div>
+
+            <div class="card-meta">2 minutes ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Collection of extracted System Prompts from popular chatbots like ChatGPT, Claude & Gemini</div>
+                <div class="card-snippet-zh">热门聊天机器人（如ChatGPT、Claude和Gemini）系统提示词提取合集</div>
+            </div>
+        </a>
+    
+        <a href="https://github.com/NevaMind-AI/memU" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">GitHub Trending </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">NevaMind-AI/memU</h3>
+                
+            </div>
+
+            <div class="card-meta">2 minutes ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Memory for 24/7 proactive agents like moltbot (clawdbot).</div>
+                <div class="card-snippet-zh">适用于24/7全天候主动代理（如moltbot/clawdbot）的记忆系统。</div>
+            </div>
+        </a>
+    
+        <a href="https://github.com/MoonshotAI/kimi-cli" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">GitHub Trending </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">MoonshotAI/kimi-cli</h3>
+                
+            </div>
+
+            <div class="card-meta">2 minutes ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Kimi Code CLI is your next CLI agent.</div>
+                <div class="card-snippet-zh">Kimi Code CLI 是你的下一代命令行智能体。</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-hfPapers" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://huggingface.co/papers" target="_blank" class="section-link">Hugging Face Daily Papers</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 AI智能体框架与安全新进展</h3>
+<p><strong>💡 技术核心</strong>: 本组研究聚焦于增强AI智能体的多模态理解与安全部署能力。World Craft提出通过文本创建可交互的虚拟世界；AdaReasoner通过动态工具编排进行迭代式视觉推理；而AgentDoG则建立了一套诊断性护栏框架，专门用于评估和保障AI智能体的安全性与安全性。
+<strong>🚀 行业影响</strong>: 这些工作标志着AI智能体正从单一任务执行向复杂、安全的开放式环境交互演进，为构建更可靠、可控的通用人工智能系统提供了关键的安全框架与核心技术。</p>
+<h3>🔹 多模态基础模型的演进</h3>
+<p><strong>💡 技术核心</strong>: 研究旨在突破现有视觉-语言模型的局限。Pragmatic VLA致力于构建一个更实用的视觉-语言-动作基础模型；Visual Generation则探索如何通过视觉生成来解锁类人的推理能力，构建多模态世界模型。
+<strong>🚀 行业影响</strong>: 这些进展将大幅提升AI对物理世界的理解与交互能力，是通向具身智能和通用人工智能的关键一步，预计将在机器人、自动驾驶、内容创作等领域产生深远影响。</p>
+<h3>🔹 生物医药领域的AI精准发现工具</h3>
+<p><strong>💡 技术核心</strong>: GPCR-Filter是一个用于高效、精确发现GPCR（G蛋白偶联受体）调控剂的深度学习框架。它通过算法筛选，显著提升了药物早期发现的效率和精度。
+<strong>🚀 行业影响</strong>: 该框架为靶向GPCR的药物研发——这是现代药物研发的关键领域——提供了强大的AI驱动新工具，有望加速新药发现进程，降低研发成本。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://tldr.takara.ai/p/2601.09150" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">90</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">World Craft: Agentic Framework to Create Visualizable Worlds via Text</h3>
+                <h4 class="card-title-zh">世界构建：基于文本的可视化世界创造智能体框架</h4>
+            </div>
+
+            <div class="card-meta">15 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Large Language Models (LLMs) motivate generative agent simulation (e.g., AI Town) to create a ``dynamic world'', holding immense value across entertainment and research. However, for non-experts, especially those without programming skills, it isn't easy to customize a visualizable environment by th</div>
+                <div class="card-snippet-zh">大型语言模型（LLMs）推动了生成式智能体仿真（如AI Town）的发展，以构建一个“动态世界”，在娱乐和研究领域具有巨大价值。然而，对于非专业人士，尤其是缺乏编程技能的人来说，要定制一个可视化环境并非易事。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18692" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">87</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">A Pragmatic VLA Foundation Model</h3>
+                <h4 class="card-title-zh">一个务实的VLA基础模型</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Offering great potential in robotic manipulation, a capable Vision-Language-Action (VLA) foundation model is expected to faithfully generalize across tasks and platforms while ensuring cost efficiency (e.g., data and GPU hours required for adaptation). To this end, we develop LingBot-VLA with around</div>
+                <div class="card-snippet-zh">在机器人操作领域展现出巨大潜力的视觉-语言-动作（VLA）基础模型，需具备跨任务与跨平台的高保真泛化能力，同时确保成本效益（例如适应新任务所需的数据量与GPU计算时长）。为此，我们开发了参数规模约</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18631" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">84</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AdaReasoner: Dynamic Tool Orchestration for Iterative Visual Reasoning</h3>
+                <h4 class="card-title-zh">AdaReasoner：面向迭代式视觉推理的动态工具编排系统</h4>
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">When humans face problems beyond their immediate capabilities, they rely on tools, providing a promising paradigm for improving visual reasoning in multimodal large language models (MLLMs). Effective reasoning, therefore, hinges on knowing which tools to use, when to invoke them, and how to compose</div>
+                <div class="card-snippet-zh">当人类面临超出自身直接能力的问题时，会借助工具来应对，这为提升多模态大语言模型（MLLMs）的视觉推理能力提供了可行范式。因此，有效的推理关键在于明确应使用何种工具、何时调用这些工具以及如何组合运用。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18491" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">81</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AgentDoG: A Diagnostic Guardrail Framework for AI Agent Safety and Security</h3>
+                <h4 class="card-title-zh">AgentDoG：面向AI智能体安全与防护的诊断性护栏框架</h4>
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">The rise of AI agents introduces complex safety and security challenges arising from autonomous tool use and environmental interactions. Current guardrail models lack agentic risk awareness and transparency in risk diagnosis. To introduce an agentic guardrail that covers complex and numerous risky b</div>
+                <div class="card-snippet-zh">人工智能代理的崛起，因其自主使用工具和与环境交互的特性，带来了复杂的安全与安保挑战。当前的防护模型缺乏对代理风险的认知，且在风险诊断方面透明度不足。为此，我们亟需引入一种能够覆盖复杂且大量风险行为的代理防护机制。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.19149" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">78</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">GPCR-Filter: a deep learning framework for efficient and precise GPCR modulator discovery</h3>
+                <h4 class="card-title-zh">GPCR-Filter：一种用于高效精准发现GPCR调节剂的深度学习框架</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">G protein-coupled receptors (GPCRs) govern diverse physiological processes and are central to modern pharmacology. Yet discovering GPCR modulators remains challenging because receptor activation often arises from complex allosteric effects rather than direct binding affinity, and conventional assays</div>
+                <div class="card-snippet-zh">G蛋白偶联受体（GPCRs）调控多种生理过程，是现代药理学研究的核心。然而，GPCR调节剂的发现仍面临挑战，因为受体激活通常源于复杂的变构效应而非直接结合亲和力，且传统检测方法——</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.19375" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">75</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Selective Steering: Norm-Preserving Control Through Discriminative Layer Selection</h3>
+                <h4 class="card-title-zh">选择性引导：通过判别性层级选择实现规范保持控制</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Despite significant progress in alignment, large language models (LLMs) remain vulnerable to adversarial attacks that elicit harmful behaviors. Activation steering techniques offer a promising inference-time intervention approach, but existing methods suffer from critical limitations: activation add</div>
+                <div class="card-snippet-zh">尽管在模型对齐方面取得了显著进展，大型语言模型（LLM）仍易受对抗性攻击的影响，从而诱发有害行为。激活导向技术作为一种颇具前景的推理时干预手段，但现有方法存在关键局限：激活叠加</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.19834" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">72</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Visual Generation Unlocks Human-Like Reasoning through Multimodal World Models</h3>
+                <h4 class="card-title-zh">视觉生成通过多模态世界模型解锁类人推理能力。</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Humans construct internal world models and reason by manipulating the concepts within these models. Recent advances in AI, particularly chain-of-thought (CoT) reasoning, approximate such human cognitive abilities, where world models are believed to be embedded within large language models. Expert-le</div>
+                <div class="card-snippet-zh">人类通过构建内部世界模型并操纵其中的概念进行推理。人工智能的最新进展，特别是思维链推理，正在逼近这种人类认知能力，人们认为世界模型被嵌入在大型语言模型中。专家级——</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17645" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">69</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AVMeme Exam: A Multimodal Multilingual Multicultural Benchmark for LLMs' Contextual and Cultural Knowledge and Thinking</h3>
+                <h4 class="card-title-zh">AVMeme测评：一个面向大语言模型情境与文化知识与思维的多模态多语言多文化基准</h4>
+            </div>
+
+            <div class="card-meta">4 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Internet audio-visual clips convey meaning through time-varying sound and motion, which extend beyond what text alone can represent. To examine whether AI models can understand such signals in human cultural contexts, we introduce AVMeme Exam, a human-curated benchmark of over one thousand iconic In</div>
+                <div class="card-snippet-zh">互联网音视频片段通过随时间变化的声音和动作传递意义，其表达维度超越了纯文本所能涵盖的范围。为探究人工智能模型能否在人类文化语境中理解此类信号，我们推出AVMeme Exam——一个由人工精心筛选的评测基准，收录了上千个标志性网络迷因视频片段。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.19362" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">66</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Revisiting Parameter Server in LLM Post-Training</h3>
+                <h4 class="card-title-zh">重新审视大语言模型后训练中的参数服务器</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Modern data parallel (DP) training favors collective communication over parameter servers (PS) for its simplicity and efficiency under balanced workloads. However, the balanced workload assumption no longer holds in large language model (LLM) post-training due to the high variance in sequence length</div>
+                <div class="card-snippet-zh">现代数据并行（DP）训练因其在均衡工作负载下的简洁性和高效性，更倾向于采用集体通信而非参数服务器（PS）。然而，在大语言模型（LLM）的后训练阶段，由于序列长度的高度差异性，均衡工作负载的假设已不再成立。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17237" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">63</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">C-RADIOv4 (Tech Report)</h3>
+                <h4 class="card-title-zh">C-RADIOv4（技术报告）</h4>
+            </div>
+
+            <div class="card-meta">5 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">By leveraging multi-teacher distillation, agglomerative vision backbones provide a unified student model that retains and improves the distinct capabilities of multiple teachers. In this tech report, we describe the most recent release of the C-RADIO family of models, C-RADIOv4, which builds upon AM</div>
+                <div class="card-snippet-zh">通过运用多教师蒸馏技术，聚合视觉骨干网络提供了一个统一的学生模型，该模型不仅保留了多位教师的独特能力，还对其进行了提升。在本技术报告中，我们介绍了C-RADIO模型家族的最新版本C-RADIOv4，该版本基于AM架构构建。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17668" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">60</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Fast KVzip: Efficient and Accurate LLM Inference with Gated KV Eviction</h3>
+                <h4 class="card-title-zh">Fast KVzip：通过门控KV淘汰实现高效精准的LLM推理</h4>
+            </div>
+
+            <div class="card-meta">4 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Efficient key-value (KV) cache management is crucial for the practical deployment of large language models (LLMs), yet existing compression techniques often incur a trade-off between performance degradation and computational overhead. We propose a novel gating-based KV cache eviction method for froz</div>
+                <div class="card-snippet-zh">高效的键值（KV）缓存管理对于大语言模型（LLM）的实际部署至关重要，然而现有压缩技术往往需要在性能下降与计算开销之间进行权衡。我们针对冻结</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18226" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">57</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Yunjue Agent Tech Report: A Fully Reproducible, Zero-Start In-Situ Self-Evolving Agent System for Open-Ended Tasks</h3>
+                <h4 class="card-title-zh">云炬智能体技术报告：面向开放任务的全可复现、零启动原位自进化智能体系统</h4>
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Conventional agent systems often struggle in open-ended environments where task distributions continuously drift and external supervision is scarce. Their reliance on static toolsets or offline training lags behind these dynamics, leaving the system's capability boundaries rigid and unknown. To addr</div>
+                <div class="card-snippet-zh">传统智能体系统在开放环境中常常面临挑战，这些环境中的任务分布持续漂移且外部监督稀缺。它们对静态工具集或离线训练的依赖难以跟上这种动态变化，导致系统能力边界僵化且难以界定。为解决这一问题，</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17617" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">54</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Agentic Search in the Wild: Intents and Trajectory Dynamics from 14M+ Real Search Requests</h3>
+                <h4 class="card-title-zh">Agentic搜索实战解析：基于1400万+真实搜索请求的意图与轨迹动态研究</h4>
+            </div>
+
+            <div class="card-meta">4 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">LLM-powered search agents are increasingly being used for multi-step information seeking tasks, yet the IR community lacks empirical understanding of how agentic search sessions unfold and how retrieved evidence is used. This paper presents a large-scale log analysis of agentic search based on 14.44</div>
+                <div class="card-snippet-zh">基于大规模语言模型的搜索代理正越来越多地应用于多步骤信息检索任务，然而信息检索领域对于代理式搜索会话的实际运作机制及检索证据的利用方式仍缺乏实证研究。本文通过对14.44亿条日志记录的大规模分析，首次系统揭示了代理式搜索的行为模式。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17895" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">51</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Masked Depth Modeling for Spatial Perception</h3>
+                <h4 class="card-title-zh">掩蔽深度建模用于空间感知</h4>
+            </div>
+
+            <div class="card-meta">4 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Spatial visual perception is a fundamental requirement in physical-world applications like autonomous driving and robotic manipulation, driven by the need to interact with 3D environments. Capturing pixel-aligned metric depth using RGB-D cameras would be the most viable way, yet it usually faces obs</div>
+                <div class="card-snippet-zh">空间视觉感知是自动驾驶和机器人操作等物理世界应用中的基本需求，其核心在于与三维环境进行交互。利用RGB-D相机捕捉像素对齐的度量深度信息本是最可行的实现方式，但该方法通常面临观测局限——</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18744" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">48</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">TSRBench: A Comprehensive Multi-task Multi-modal Time Series Reasoning Benchmark for Generalist Models</h3>
+                <h4 class="card-title-zh">TSRBench：面向通用模型的多任务多模态时间序列推理综合基准测试平台</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Time series data is ubiquitous in real-world scenarios and crucial for critical applications ranging from energy management to traffic control. Consequently, the ability to reason over time series is a fundamental skill for generalist models to solve practical problems. However, this dimension is no</div>
+                <div class="card-snippet-zh">时间序列数据在现实场景中无处不在，对从能源管理到交通控制等关键应用至关重要。因此，对时间序列进行推理的能力，是通用模型解决实际问题的基本技能。然而，这一维度尚</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.14103" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">45</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Interp3D: Correspondence-aware Interpolation for Generative Textured 3D Morphing</h3>
+                <h4 class="card-title-zh">Interp3D：面向生成式纹理3D形变的对应感知插值技术</h4>
+            </div>
+
+            <div class="card-meta">9 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Textured 3D morphing seeks to generate smooth and plausible transitions between two 3D assets, preserving both structural coherence and fine-grained appearance. This ability is crucial not only for advancing 3D generation research but also for practical applications in animation, editing, and digita</div>
+                <div class="card-snippet-zh">纹理化三维形变旨在生成两个三维资产之间平滑且逼真的过渡，同时保持结构连贯性与细粒度外观。这种能力不仅对推动三维生成研究至关重要，也在动画制作、内容编辑和数字媒体等实际应用中具有关键价值。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18790" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">42</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">MortalMATH: Evaluating the Conflict Between Reasoning Objectives and Emergency Contexts</h3>
+                <h4 class="card-title-zh">MortalMATH：评估推理目标与紧急情境之间的冲突</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Large Language Models are increasingly optimized for deep reasoning, prioritizing the correct execution of complex tasks over general conversation. We investigate whether this focus on calculation creates a "tunnel vision" that ignores safety in critical situations. We introduce MortalMATH, a benchm</div>
+                <div class="card-snippet-zh">大型语言模型正日益针对深度推理进行优化，将复杂任务的正确执行置于通用对话之上。我们探究这种对计算能力的侧重是否会导致"隧道视野"，即在关键情境下忽视安全性。为此，我们提出MortalMATH基准测试，旨在评估模型在高压数学推理场景中的安全决策能力。</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.18753" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">39</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">HalluGuard: Demystifying Data-Driven and Reasoning-Driven Hallucinations in LLMs</h3>
+                <h4 class="card-title-zh">HalluGuard：揭秘大语言模型中数据驱动与推理驱动的幻觉现象</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">The reliability of Large Language Models (LLMs) in high-stakes domains such as healthcare, law, and scientific discovery is often compromised by hallucinations. These failures typically stem from two sources: data-driven hallucinations and reasoning-driven hallucinations. However, existing detection</div>
+                <div class="card-snippet-zh">大型语言模型（LLM）在医疗、法律和科学发现等高风险领域的可靠性常因幻觉问题而受损。这些故障通常源于两类：数据驱动的幻觉与推理驱动的幻觉。然而现有的检测方法</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17067" target="_blank" class="card fade-in" style="animation-delay: 540ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">36</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">A Mechanistic View on Video Generation as World Models: State and Dynamics</h3>
+                <h4 class="card-title-zh">视频生成作为世界模型：状态与动态的机制视角</h4>
+            </div>
+
+            <div class="card-meta">6 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Large-scale video generation models have demonstrated emergent physical coherence, positioning them as potential world models. However, a gap remains between contemporary "stateless" video architectures and classic state-centric world model theories. This work bridges this gap by proposing a novel t</div>
+                <div class="card-snippet-zh">大规模视频生成模型已展现出涌现的物理一致性，使其具备成为世界模型的潜力。然而，当前"无状态"的视频架构与经典以状态为中心的世界模型理论之间仍存在差距。本研究通过提出一种新颖的t</div>
+            </div>
+        </a>
+    
+        <a href="https://tldr.takara.ai/p/2601.17958" target="_blank" class="card fade-in" style="animation-delay: 570ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Daily Papers </div>
+                <div class="card-score" title="Importance Score">33</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">TensorLens: End-to-End Transformer Analysis via High-Order Attention Tensors</h3>
+                <h4 class="card-title-zh">TensorLens：基于高阶注意力张量的端到端Transformer分析框架</h4>
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Attention matrices are fundamental to transformer research, supporting a broad range of applications including interpretability, visualization, manipulation, and distillation. Yet, most existing analyses focus on individual attention heads or layers, failing to account for the model's global behavio</div>
+                <div class="card-snippet-zh">注意力矩阵是Transformer研究的核心要素，广泛支撑着可解释性分析、可视化呈现、参数调控与知识蒸馏等应用。然而，现有研究多聚焦于单个注意力头或独立层级，未能充分揭示模型的全局行为特征。</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-hfBlog" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://huggingface.co/blog" target="_blank" class="section-link">Hugging Face Blog</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 区域性AI发展的数据、架构与评估</h3>
+<p><strong>💡 技术意义</strong>：该趋势下的文章聚焦于为特定地区与文化定制AI。Nemotron-Personas-Brazil 提出了为巴西主权AI“共设计”数据集的方法；Architectural Choices in China‘s Open-Source AI Ecosystem 分析了中国开源生态中超越单一模型的架构设计思路；Alyah 和 Falcon-H1-Arabic 则分别针对阿拉伯语的特定方言评估与混合架构模型展开研究。
+<strong>🚀 重要性</strong>：这标志着AI发展进入“深本地化”阶段，强调技术必须适应并服务于本地语言、文化和产业需求，对构建真正全球化且公平的AI生态至关重要。</p>
+<hr>
+<h3>🔹 AI智能体的工业落地与系统安全</h3>
+<p><strong>💡 技术意义</strong>：本组文章关注AI在实际应用中的挑战。AssetOpsBench 旨在创建一个弥合学术基准与工业现实差距的智能体测试平台；AprielGuard 则是一个专注于安全性与对抗鲁棒性的LLM系统护栏框架。
+<strong>🚀 重要性</strong>：随着AI从演示走向生产，解决其在复杂、真实环境中的可靠性、安全性和可评估性问题，是AI技术实现商业价值和社会价值转化的核心前提。</p>
+<hr>
+<h3>🔹 底层框架与核心组件的技术优化</h3>
+<p><strong>💡 技术意义</strong>：此部分涉及基础工具的关键升级。Differential Transformer V2 改进了其核心微分架构，提升了性能与效率；Tokenization in Transformers v5 简化并模块化了分词器，使其更清晰易用。
+<strong>🚀 重要性</strong>：作为支撑无数AI模型和应用的基础设施（如Transformers库），其底层组件的每一次重大优化，都将涟漪式地提升整个开发社区的效率与模型能力上限，是推动技术进步的基础动力。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://huggingface.co/blog/nvidia/nemotron-personas-brazil" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Nemotron-Personas-Brazil: Co-Designed Data for Sovereign AI</h3>
+                <h4 class="card-title-zh">Nemotron-Personas-Brazil：为自主人工智能共同设计的数据集</h4>
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/huggingface/one-year-since-the-deepseek-moment-blog-2" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">82</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Architectural Choices in China's Open-Source AI Ecosystem: Building Beyond DeepSeek </h3>
+                <h4 class="card-title-zh">中国开源AI生态的架构选择：超越DeepSeek的构建之路</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/tiiuae/emirati-benchmarks" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">79</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Alyah ⭐️: Toward Robust Evaluation of Emirati Dialect Capabilities in Arabic LLMs</h3>
+                <h4 class="card-title-zh">阿利亚 ⭐️：面向阿拉伯语大语言模型中阿联酋方言能力的稳健评估</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/LinkedIn/gpt-oss-agentic-rl" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">76</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Unlocking Agentic RL Training for GPT-OSS: A Practical Retrospective</h3>
+                <h4 class="card-title-zh">解锁GPT-OSS的智能体强化学习训练：一次实践回顾</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/ibm-research/assetopsbench-playground-on-hugging-face" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">73</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AssetOpsBench: Bridging the Gap Between AI Agent Benchmarks and Industrial Reality</h3>
+                <h4 class="card-title-zh">AssetOpsBench：弥合AI智能体基准测试与工业现实之间的鸿沟</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/microsoft/diff-attn-v2" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">70</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Differential Transformer V2</h3>
+                <h4 class="card-title-zh">差分变压器V2</h4>
+            </div>
+
+            <div class="card-meta">9 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/nvidia/nvidia-cosmos-reason-2-brings-advanced-reasoning" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">67</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">NVIDIA Cosmos Reason 2 Brings Advanced Reasoning To Physical AI</h3>
+                <h4 class="card-title-zh">英伟达Cosmos Reason 2为物理AI引入先进推理能力</h4>
+            </div>
+
+            <div class="card-meta">23 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/tiiuae/falcon-h1-arabic" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">64</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Introducing Falcon-H1-Arabic: Pushing the Boundaries of Arabic Language AI with Hybrid Architecture</h3>
+                <h4 class="card-title-zh">推出Falcon-H1-Arabic：以混合架构突破阿拉伯语人工智能的边界</h4>
+            </div>
+
+            <div class="card-meta">24 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/ServiceNow-AI/aprielguard" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">61</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AprielGuard: A Guardrail for Safety and Adversarial Robustness in Modern LLM Systems</h3>
+                <h4 class="card-title-zh">AprielGuard：现代LLM系统的安全与对抗鲁棒性防护栏</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/tokenizers" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">58</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Tokenization in Transformers v5: Simpler, Clearer, and More Modular</h3>
+                <h4 class="card-title-zh">Transformer v5中的分词机制：更简洁、更清晰、更模块化</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/ibm-research/cuga-on-hugging-face" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">55</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">CUGA on Hugging Face: Democratizing Configurable AI Agents</h3>
+                <h4 class="card-title-zh">CUGA登陆Hugging Face：推动可配置AI智能体民主化进程</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/ggml-org/model-management-in-llamacpp" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">52</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">New in llama.cpp: Model Management</h3>
+                <h4 class="card-title-zh">llama.cpp新特性：模型管理</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/hf-skills-training-codex" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">49</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Codex is Open Sourcing AI models</h3>
+                <h4 class="card-title-zh">Codex正在开源AI模型。</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/hf-skills-training" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">46</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">We Got Claude to Fine-Tune an Open Source LLM</h3>
+                <h4 class="card-title-zh">我们让Claude微调了一个开源大语言模型。</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/transformers-v5" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">43</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Transformers v5: Simple model definitions powering the AI ecosystem</h3>
+                <h4 class="card-title-zh">Transformers v5：以简洁模型定义驱动人工智能生态发展</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/rapidfireai" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">40</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">20x Faster TRL Fine-tuning with RapidFire AI</h3>
+                <h4 class="card-title-zh">RapidFire AI实现TRL微调速度提升20倍</h4>
+            </div>
+
+            <div class="card-meta">2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/anylanguagemodel" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">37</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Introducing AnyLanguageModel: One API for Local and Remote LLMs on Apple Platforms</h3>
+                <h4 class="card-title-zh">推出AnyLanguageModel：适用于苹果平台本地与远程LLM的统一API</h4>
+            </div>
+
+            <div class="card-meta">2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/huggingface-hub-v1" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">34</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">huggingface_hub v1.0: Five Years of Building the Foundation of Open Machine Learning</h3>
+                <h4 class="card-title-zh">huggingface_hub v1.0：五年铸就开放机器学习基石</h4>
+            </div>
+
+            <div class="card-meta">3 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/virustotal" target="_blank" class="card fade-in" style="animation-delay: 540ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">31</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Hugging Face and VirusTotal collaborate to strengthen AI security</h3>
+                <h4 class="card-title-zh">Hugging Face与VirusTotal携手合作，共同强化人工智能安全防护。</h4>
+            </div>
+
+            <div class="card-meta">3 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://huggingface.co/blog/sentence-transformers-joins-hf" target="_blank" class="card fade-in" style="animation-delay: 570ms">
+            <div class="card-header">
+                <div class="card-source">Hugging Face Blog </div>
+                <div class="card-score" title="Importance Score">28</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Sentence Transformers is joining Hugging Face!</h3>
+                <h4 class="card-title-zh">Sentence Transformers 正式加入 Hugging Face！</h4>
+            </div>
+
+            <div class="card-meta">3 months ago</div>
+            
+            
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-productHunt" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://www.producthunt.com/topics/artificial-intelligence" target="_blank" class="section-link">Product Hunt</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 AI 内容创作与优化工具集群</h3>
+<p><strong>💡 技术亮点</strong>: CleanRoll AI（视频内容净化）、Trails（动态展示文稿）与 Trailward（智能旅程规划）均展示了生成式AI在特定垂直领域的应用能力，专注于自动化处理、结构化生成与交互式内容优化。
+<strong>🚀 市场影响</strong>: 这反映了AI生产力工具正从通用型向专业化、场景化深入，帮助创作者、营销人员及企业大幅降低专业内容（如视频、演示文稿、用户旅程）的制作门槛与时间成本，提升内容质量与用户参与度。</p>
+<h3>🔹 Jotform AI Chatbot for Canva</h3>
+<p><strong>💡 技术亮点</strong>: 该工具将Jotform的AI聊天机器人功能深度集成至Canva设计平台，允许用户在创作过程中直接通过自然语言对话生成表单、收集反馈或触发自动化工作流。
+<strong>🚀 市场影响</strong>: 此举标志着不同平台间AI功能的“无缝融合”趋势，通过API和插件生态，将数据收集、用户互动能力直接嵌入核心设计流程，构建了更流畅、智能的“设计-反馈-迭代”一体化工作空间。</p>
+<h3>🔹 GameCutAI</h3>
+<p><strong>💡 技术亮点</strong>: 专注于利用AI自动识别并剪辑游戏录像中的高光时刻（如击杀、胜利场景），通过计算机视觉与事件检测算法实现内容自动化精选。
+<strong>🚀 市场影响</strong>: 满足了游戏内容创作者与广大玩家的核心痛点，将用户从冗长的录像回顾与手动剪辑中解放出来，加速了游戏精彩内容的传播与分享，是AI在娱乐与媒体领域的一个高效应用实例。</p>
+<h3>🔹 Delos Mail</h3>
+<p><strong>💡 技术亮点</strong>: 一款AI驱动的邮件管理助手，旨在通过智能分类、摘要撰写、优先排序及自动化回复建议来优化邮件处理效率。
+<strong>🚀 市场影响</strong>: 在电子邮件依旧为核心商务沟通工具的背景下，此类AI助手直击信息过载痛点，帮助专业人士，尤其是商务人士，重新掌控收件箱，节约大量日常沟通时间，是提升个人与团队生产力的关键工具。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://www.producthunt.com/products/cleanroll-ai" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">75</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">CleanRoll AI</h3>
+                
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">AI-powered rent roll standardization for CRE investors</div>
+                <div class="card-snippet-zh">面向商业地产投资者的AI驱动租金流水标准化解决方案</div>
+            </div>
+        </a>
+    
+        <a href="https://www.producthunt.com/products/trails-2" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">72</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Trails</h3>
+                <h4 class="card-title-zh">足迹</h4>
+            </div>
+
+            <div class="card-meta">5 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Automated insights from LLM agent runs</div>
+                <div class="card-snippet-zh">LLM智能体运行自动洞察</div>
+            </div>
+        </a>
+    
+        <a href="https://www.producthunt.com/products/trailward" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">69</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Trailward</h3>
+                <h4 class="card-title-zh">向山而行</h4>
+            </div>
+
+            <div class="card-meta">14 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Gamified micro‑lessons that teach any topic in 90 seconds</div>
+                <div class="card-snippet-zh">90秒掌握任何主题的趣味微课</div>
+            </div>
+        </a>
+    
+        <a href="https://www.producthunt.com/products/jotform" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">66</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Jotform AI Chatbot for Canva</h3>
+                
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Bring Canva designs to life with an embedded AI chatbot</div>
+                <div class="card-snippet-zh">通过嵌入式AI聊天机器人，让Canva设计作品焕发生机</div>
+            </div>
+        </a>
+    
+        <a href="https://www.producthunt.com/products/gamecutai" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">63</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">GameCutAI</h3>
+                
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Turn game footage into viral highlights in seconds</div>
+                <div class="card-snippet-zh">数秒内将游戏录像转化为热门集锦</div>
+            </div>
+        </a>
+    
+        <a href="https://www.producthunt.com/products/delos" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">Product Hunt AI </div>
+                <div class="card-score" title="Importance Score">60</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Delos Mail</h3>
+                <h4 class="card-title-zh">德洛斯邮件</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Delos AI drafts your replies and organizes your emails</div>
+                <div class="card-snippet-zh">Delos AI 为您草拟回复并整理邮件</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+         <div id="tab-researchBlogs" class="tab-content">
+            
+        <section>
+            <h2 class="section-header">Industry Research Blogs</h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 基础设施突破：支撑亿级用户的数据库扩展</h3>
+<p><strong>💡 技术意义</strong>: OpenAI 详细介绍了如何大规模扩展 PostgreSQL，以支持超过 8 亿 ChatGPT 用户。这涉及复杂的分片、复制和性能优化策略，确保了服务的高可用性与低延迟。
+<strong>🚀 行业影响</strong>: 这为所有构建大规模消费者AI应用的公司提供了至关重要的基础设施蓝本，证明了传统关系型数据库在极端负载下的可行性，降低了行业的技术风险与门槛。</p>
+<hr>
+<h3>🔹 智能体架构与安全演进</h3>
+<p><strong>💡 技术意义</strong>: 此趋势涵盖两项关键进展：一是“展开Codex智能体循环”，深入探讨了AI代理的内部推理与行动循环机制；二是“当AI代理点击链接时保护数据安全”，聚焦于智能体在执行外部操作时的安全隔离与数据保护技术。
+<strong>🚀 行业影响</strong>: 这些研究为构建更可靠、安全且可解释的自主AI智能体奠定了理论基础，是AI从工具迈向自主代理的关键一步，对软件开发、自动化及网络安全领域具有深远影响。</p>
+<hr>
+<h3>🔹 OpenAI 的企业级应用实践</h3>
+<p><strong>💡 技术意义</strong>: 本集群展示了AI在垂直行业的落地案例：包括时尚品牌PVH利用AI重塑设计、求职平台Indeed优化搜索、语言学习应用Praktika的对话式教学，以及用于税务捐赠的个性化推荐系统。
+<strong>🚀 行业影响</strong>: 这些案例证明了大型语言模型（LLM）和AI平台正深度融入各行业核心业务，驱动产品创新、提升用户体验并创造新商业模式，标志着AI技术从通用能力转向专业化、场景化赋能。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://openai.com/index/the-next-chapter-for-ai-in-the-eu" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">95</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">The next chapter for AI in the EU</h3>
+                <h4 class="card-title-zh">欧盟人工智能发展的新篇章</h4>
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">OpenAI launches the EU Economic Blueprint 2.0 with new data, partnerships, and initiatives to accelerate AI adoption, skills, and growth across Europe.</div>
+                <div class="card-snippet-zh">OpenAI发布欧盟经济蓝图2.0，通过新增数据资源、合作伙伴关系及多项倡议，加速人工智能在欧洲的普及应用、技能培养与经济增长。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/emea-youth-and-wellbeing-grant" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">92</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">EMEA Youth & Wellbeing Grant</h3>
+                <h4 class="card-title-zh">欧洲、中东和非洲青年与福祉资助计划</h4>
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Apply for the EMEA Youth & Wellbeing Grant, a €500,000 program funding NGOs and researchers advancing youth safety and wellbeing in the age of AI.</div>
+                <div class="card-snippet-zh">申请EMEA青年与福祉资助计划，这是一项总额50万欧元的项目，旨在资助致力于在人工智能时代推动青少年安全与福祉的非政府组织及研究人员。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/ai-agent-link-safety" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">89</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Keeping your data safe when an AI agent clicks a link</h3>
+                <h4 class="card-title-zh">AI智能体点击链接时确保数据安全</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Learn how OpenAI protects user data when AI agents open links, preventing URL-based data exfiltration and prompt injection with built-in safeguards.</div>
+                <div class="card-snippet-zh">了解OpenAI如何通过内置安全机制，在AI代理访问链接时保护用户数据，有效防止基于URL的数据窃取与提示注入攻击。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/pvh-future-of-fashion" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">86</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">PVH reimagines the future of fashion with OpenAI</h3>
+                <h4 class="card-title-zh">PVH携手OpenAI重塑时尚未来。</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">PVH Corp., parent company of Calvin Klein and Tommy Hilfiger, is adopting ChatGPT Enterprise to bring AI into fashion design, supply chain, and consumer engagement.</div>
+                <div class="card-snippet-zh">PVH集团，Calvin Klein与Tommy Hilfiger的母公司，正引入ChatGPT企业版，将人工智能融入时装设计、供应链及消费者互动领域。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/introducing-prism" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">83</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Introducing Prism</h3>
+                <h4 class="card-title-zh">推出Prism</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Prism is a free LaTeX-native workspace with GPT-5.2 built in, helping researchers write, collaborate, and reason in one place.</div>
+                <div class="card-snippet-zh">Prism是一款免费的LaTeX原生工作空间，内置GPT-5.2，帮助研究人员在统一环境中完成写作、协作与逻辑推演。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/trustbank" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">80</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Powering tax donations with AI powered personalized recommendations</h3>
+                <h4 class="card-title-zh">利用AI驱动的个性化推荐助力税务捐赠</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">TRUSTBANK partnered with Recursive to build Choice AI using OpenAI models, delivering personalized, conversational recommendations that simplify Furusato Nozei gift discovery. A multi-agent system helps donors navigate thousands of options and find gifts that match their preferences.</div>
+                <div class="card-snippet-zh">TRUSTBANK与Recursive合作，利用OpenAI模型构建了Choice AI系统，通过个性化对话式推荐简化故乡税礼品发现流程。该多智能体系统能协助捐赠者从数千种选项中筛选，精准匹配其偏好的礼品选择。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/indeed-maggie-hulce" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">77</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">How Indeed uses AI to help evolve the job search</h3>
+                <h4 class="card-title-zh">Indeed如何运用人工智能革新求职体验</h4>
+            </div>
+
+            <div class="card-meta">3 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Indeed’s CRO Maggie Hulce shares how AI is transforming job search, recruiting, and talent acquisition for employers and job seekers.</div>
+                <div class="card-snippet-zh">Indeed首席营收官玛吉·赫尔斯揭示人工智能如何重塑雇主与求职者的招聘、求职及人才获取全流程。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/unrolling-the-codex-agent-loop" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">74</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Unrolling the Codex agent loop</h3>
+                <h4 class="card-title-zh">展开Codex智能体循环</h4>
+            </div>
+
+            <div class="card-meta">6 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">A technical deep dive into the Codex agent loop, explaining how Codex CLI orchestrates models, tools, prompts, and performance using the Responses API.</div>
+                <div class="card-snippet-zh">深入解析Codex智能体循环技术，探讨Codex CLI如何通过响应API协调模型、工具、提示与性能运作机制。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/scaling-postgresql" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">71</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Scaling PostgreSQL to power 800 million ChatGPT users</h3>
+                <h4 class="card-title-zh">将PostgreSQL扩展至支撑8亿ChatGPT用户</h4>
+            </div>
+
+            <div class="card-meta">7 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">An inside look at how OpenAI scaled PostgreSQL to millions of queries per second using replicas, caching, rate limiting, and workload isolation.</div>
+                <div class="card-snippet-zh">深入解析OpenAI如何借助副本复制、缓存机制、速率限制与工作负载隔离，将PostgreSQL扩展至每秒处理数百万次查询。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/praktika" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">68</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Inside Praktika's conversational approach to language learning</h3>
+                <h4 class="card-title-zh">Praktika对话式语言学习法探秘</h4>
+            </div>
+
+            <div class="card-meta">7 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">How Praktika uses GPT-4.1 and GPT-5.2 to build adaptive AI tutors that personalize lessons, track progress, and help learners achieve real-world language fluency</div>
+                <div class="card-snippet-zh">Praktika如何运用GPT-4.1与GPT-5.2构建自适应AI导师系统，实现个性化课程定制、进度追踪，助力学习者达成真实场景的语言流利度目标。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/business/guides-and-resources/chatgpt-usage-and-adoption-patterns-at-work" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">65</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Inside GPT-5 for Work: How Businesses Use GPT-5</h3>
+                <h4 class="card-title-zh">揭秘GPT-5职场应用：企业如何驾驭新一代智能引擎</h4>
+            </div>
+
+            <div class="card-meta">7 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">A data-driven report on how workers across industries use ChatGPT—covering adoption trends, top tasks, departmental patterns, and the future of AI at work.</div>
+                <div class="card-snippet-zh">一份关于各行业工作者如何使用ChatGPT的数据驱动报告——涵盖采用趋势、主要任务、部门模式及职场AI的未来发展。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/higgsfield" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">62</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">How Higgsfield turns simple ideas into cinematic social videos</h3>
+                <h4 class="card-title-zh">Higgsfield如何将简单创意转化为电影级社交视频</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Discover how Higgsfield gives creators cinematic, social-first video output from simple inputs using OpenAI GPT-4.1, GPT-5, and Sora 2.</div>
+                <div class="card-snippet-zh">探索Higgsfield如何利用OpenAI GPT-4.1、GPT-5及Sora 2技术，让创作者仅凭简单输入即可获得影院级、社交平台优先的视频输出。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/edu-for-countries" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">59</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Introducing Edu for Countries</h3>
+                <h4 class="card-title-zh">推出面向国家的教育版</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Edu for Countries is a new OpenAI initiative helping governments use AI to modernize education systems and build future-ready workforces.</div>
+                <div class="card-snippet-zh">Edu for Countries是OpenAI发起的一项新倡议，旨在协助各国政府运用人工智能革新教育体系，培养面向未来的劳动力队伍。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/how-countries-can-end-the-capability-overhang" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">56</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">How countries can end the capability overhang</h3>
+                <h4 class="card-title-zh">各国如何终结能力过剩问题</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Our latest report reveals stark differences in advanced AI adoption across countries and outlines new initiatives to help nations capture productivity gains from AI.</div>
+                <div class="card-snippet-zh">我们最新报告揭示了各国在先进人工智能应用上的显著差距，并概述了帮助各国把握人工智能生产力红利的新举措。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/horizon-1000" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">53</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Horizon 1000: Advancing AI for primary healthcare</h3>
+                <h4 class="card-title-zh">地平线1000：推动人工智能在初级医疗保健领域的应用</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">OpenAI and the Gates Foundation launch Horizon 1000, a $50M pilot advancing AI capabilities for healthcare in Africa. The initiative aims to reach 1,000 clinics by 2028.</div>
+                <div class="card-snippet-zh">OpenAI与盖茨基金会联合启动"地平线1000"计划，投入5000万美元试点项目，旨在提升非洲医疗领域的人工智能能力。该计划目标是在2028年前覆盖1000家医疗机构。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/stargate-community" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">50</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Stargate Community</h3>
+                <h4 class="card-title-zh">星际之门社区</h4>
+            </div>
+
+            <div class="card-meta">8 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Stargate Community plans detail a community-first approach to AI infrastructure, using locally tailored plans shaped by community input, energy needs, and workforce priorities.</div>
+                <div class="card-snippet-zh">星际之门社区计划详细阐述了一种社区优先的人工智能基础设施策略，通过结合社区意见、能源需求及劳动力优先事项，制定因地制宜的本地化方案。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/cisco" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">47</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Cisco and OpenAI redefine enterprise engineering with AI agents</h3>
+                <h4 class="card-title-zh">思科与OpenAI携手以AI智能体重塑企业工程新纪元。</h4>
+            </div>
+
+            <div class="card-meta">9 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Cisco and OpenAI redefine enterprise engineering with Codex, an AI software agent embedded in workflows to speed builds, automate defect fixes, and enable AI-native development.</div>
+                <div class="card-snippet-zh">思科与OpenAI通过Codex重塑企业工程实践，这款嵌入工作流程的AI软件代理能加速构建流程、自动修复缺陷，并推动AI原生开发模式。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/servicenow-powers-actionable-enterprise-ai-with-openai" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">44</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">ServiceNow powers actionable enterprise AI with OpenAI</h3>
+                <h4 class="card-title-zh">ServiceNow借助OpenAI驱动可执行的企业级人工智能。</h4>
+            </div>
+
+            <div class="card-meta">9 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">ServiceNow expands access to OpenAI frontier models to power AI-driven enterprise workflows, summarization, search, and voice across the ServiceNow Platform.</div>
+                <div class="card-snippet-zh">ServiceNow扩展了对OpenAI前沿模型的访问权限，以驱动其平台上的AI驱动企业工作流、摘要生成、搜索及语音功能。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/our-approach-to-age-prediction" target="_blank" class="card fade-in" style="animation-delay: 540ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">41</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Our approach to age prediction</h3>
+                <h4 class="card-title-zh">我们的年龄预测方法</h4>
+            </div>
+
+            <div class="card-meta">9 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">ChatGPT is rolling out age prediction to estimate if accounts are under or over 18, applying safeguards for teens and refining accuracy over time.</div>
+                <div class="card-snippet-zh">ChatGPT正在推出年龄预测功能，以估算账户用户是否年满18岁，为青少年应用防护措施，并随时间推移持续优化判断准确性。</div>
+            </div>
+        </a>
+    
+        <a href="https://openai.com/index/ai-for-self-empowerment" target="_blank" class="card fade-in" style="animation-delay: 570ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI Blog </div>
+                <div class="card-score" title="Importance Score">38</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AI for self empowerment</h3>
+                <h4 class="card-title-zh">AI赋能自我提升</h4>
+            </div>
+
+            <div class="card-meta">11 days ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">How AI can expand human agency by closing the capability overhang—helping people, businesses, and countries unlock real productivity, growth, and opportunity.</div>
+                <div class="card-snippet-zh">人工智能如何通过弥合能力差距来拓展人类能动性——助力个人、企业及国家释放真正的生产力、增长潜力与发展机遇。</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-reddit" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://www.reddit.com" target="_blank" class="section-link">Reddit</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 Kimi K2.5开源模型发布与社区互动</h3>
+<p><strong>💡 技术亮点</strong>: Moonshot AI（月之暗面）旗下的开源前沿实验室Open-source Frontier Lab发布了Kimi K2.5模型，这是一个在多个基准测试中达到先进水平（SoTA）的模型。社区迅速跟进，发布了本地运行指南。
+<strong>🚀 行业影响</strong>: 这标志着顶尖AI公司积极拥抱开源生态，降低了先进模型的使用门槛，鼓励开发者进行本地部署、微调和创新，可能加速开源与闭源模型之间的竞争。</p>
+<h3>🔹 本地LLM的实用化倡导与生态担忧</h3>
+<p><strong>💡 技术亮点</strong>: 讨论焦点从“隐私”扩展到更实际的“成本”与“可控性”。随着商业API价格持续下降，社区深入探讨运行本地模型（如Llama）在成本效益、避免服务中断、规避潜在监管限制（模型备份呼声）方面的综合优势。
+<strong>🚀 行业影响</strong>: 这反映出AI应用正在从单纯的云端服务向混合（云+端）架构演进。用户对模型所有权和控制权的需求日益增长，可能推动边缘计算和消费级硬件（如获奖的Dell DGX Spark）上的优化框架进一步发展。</p>
+<h3>🔹 模型量化与高效评估新进展</h3>
+<p><strong>💡 技术亮点</strong>: 社区涌现出两项高效能技术：BitMamba-2-1B模型（仅1.58位量化，在CPU上实现50+ tok/s）和FASHN VTON v1.5虚拟试穿模型（约10亿参数，仅需8GB显存）。同时，有开发者对包括Kimi K2.5在内的49种编码智能体/模型进行了全面的编码评估。
+<strong>🚀 行业影响</strong>: 极低位数量化技术（如1.58位）和轻量级专业模型的成功，极大地推动了AI在资源受限环境（如个人电脑、移动设备）的普及。系统化的基准测试为开发者选型提供了宝贵的数据，促进了模型优化方向的良性竞争。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp6rm5/api_pricing_is_in_freefall_whats_the_actual_case/" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">80</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">API pricing is in freefall. What's the actual case for running local now beyond privacy?</h3>
+                <h4 class="card-title-zh">API定价正急剧下滑。除了隐私保护，现在运行本地模型的实际理由还有哪些？</h4>
+            </div>
+
+            <div class="card-meta">about 15 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">K2.5 just dropped at roughly 10% of Opus pricing with competitive benchmarks. Deepseek is practically free. Gemini has a massive free tier. Every month the API cost floor drops another 50%.</div>
+                <div class="card-snippet-zh">K2.5模型刚刚发布，定价仅为Opus的十分之一左右，性能基准却颇具竞争力。Deepseek几乎免费提供服务，Gemini也提供海量免费调用额度。每月API成本底线正以50%的幅度持续下探。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpfse6/run_kimi_k25_locally/" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">77</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Run Kimi K2.5 Locally</h3>
+                <h4 class="card-title-zh">在本地运行 Kimi K2.5</h4>
+            </div>
+
+            <div class="card-meta">about 8 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Kimi-K2.5 achieves SOTA performance in vision, coding, agentic and chat tasks.</div>
+                <div class="card-snippet-zh">Kimi-K2.5在视觉、编程、智能体与对话任务中均实现了SOTA性能表现。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpewj7/ama_with_kimi_the_opensource_frontier_lab_behind/" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">74</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AMA With Kimi, The Open-source Frontier Lab Behind Kimi K2.5 Model</h3>
+                <h4 class="card-title-zh">与Kimi背后的开源前沿实验室AMA：揭秘Kimi K2.5模型</h4>
+            </div>
+
+            <div class="card-meta">about 8 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Hi r/LocalLLaMA</div>
+                <div class="card-snippet-zh">大家好，这里是 r/LocalLLaMA</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp814d/sam_altman_says_openai_is_slashing_its_hiring/" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">71</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Sam Altman Says OpenAI Is Slashing Its Hiring Pace as Financial Crunch Tightens</h3>
+                <h4 class="card-title-zh">山姆·奥特曼表示，随着财务压力加剧，OpenAI正大幅放缓招聘步伐。</h4>
+            </div>
+
+            <div class="card-meta">about 13 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">In a livestreamed town hall, Sam Altman admitted OpenAI is 'dramatically slowing down' hiring as the company faces increasing financial pressure. This follows reports of an internal 'Code Red' memo urging staff to fix ChatGPT as competitors gain ground. With analysts warning of an 'Enron-like' cash</div>
+                <div class="card-snippet-zh">在一次直播的市政厅会议上，山姆·奥特曼承认，随着公司面临日益增长的财务压力，OpenAI正在"大幅放缓"招聘进程。此前有报道称，公司内部发布了一份"红色警报"备忘录，敦促员工在竞争对手步步紧逼之际修复ChatGPT。分析师们警告称，公司可能面临"类似安然公司"的现金流危机。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp46za/ama_announcement_moonshot_ai_the_opensource/" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">68</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AMA Announcement: Moonshot AI, The Opensource Frontier Lab Behind Kimi K2.5 SoTA Model (Wednesday, 8AM-11AM PST)</h3>
+                <h4 class="card-title-zh">AMA预告：揭秘Kimi K2.5 SoTA模型背后的开源先锋实验室——月之暗面（北京时间周三晚12点至凌晨3点）</h4>
+            </div>
+
+            <div class="card-meta">about 17 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Hi r/LocalLLaMA 👋</div>
+                <div class="card-snippet-zh">大家好，r/LocalLLaMA 社区的朋友们 👋</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpde5g/backup_those_models_because_of_calls_for/" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">65</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Backup those models, because of calls for regulations</h3>
+                <h4 class="card-title-zh">备份那些模型，因为监管呼声日益高涨。</h4>
+            </div>
+
+            <div class="card-meta">about 9 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">‘Humanity needs to wake up’ to AI threats, Anthropic CEO says</div>
+                <div class="card-snippet-zh">"人类亟需觉醒"以应对AI威胁，Anthropic首席执行官警示道。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpmay0/i_just_got_my_dell_dgx_spark_gb10_that_i_won_from/" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">62</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">I just got my Dell DGX Spark GB10 that I won from the hackathon!</h3>
+                <h4 class="card-title-zh">我刚拿到在黑客松中赢得的戴尔DGX Spark GB10！</h4>
+            </div>
+
+            <div class="card-meta">about 4 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Please don't mind the breadcrumbs...</div>
+                <div class="card-snippet-zh">请别在意这些面包屑...</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qphkd8/release_bitmamba21b_i_trained_a_158bit_mamba2/" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">59</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">[Release] BitMamba-2-1B: I trained a 1.58-bit Mamba-2 model from scratch on 150B tokens (Runs on CPU @ 50+ tok/s)</h3>
+                <h4 class="card-title-zh">[发布] BitMamba-2-1B：基于1500亿token从头训练的1.58位Mamba-2模型（CPU运行速度达50+ token/秒）</h4>
+            </div>
+
+            <div class="card-meta">about 7 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Hey everyone!</div>
+                <div class="card-snippet-zh">大家好！</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp4ftj/i_made_a_coding_eval_and_ran_it_against_49/" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">56</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">I made a Coding Eval, and ran it against 49 different coding agent/model combinations, including Kimi K2.5.</h3>
+                <h4 class="card-title-zh">我创建了一个编码评估，并在49种不同的编码代理/模型组合上进行了测试，其中包括Kimi K2.5。</h4>
+            </div>
+
+            <div class="card-meta">about 17 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">You may remember me from my A guide to the best agentic tools and the best way to use them on the cheap, locally or free post from 3 months ago. Where I submitted a big wall of text at 4 am in stream of consciousness format. For some reason, I still get random replies on it, about not putting enough</div>
+                <div class="card-snippet-zh">你可能还记得我三个月前那篇《最佳智能体工具指南：如何经济实惠、本地或免费使用》的帖子。当时我在凌晨四点以意识流的形式提交了一大段文字。不知为何，至今仍会收到零星回复，说我写得不够详尽。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpdn1t/fashn_vton_v15_apache20_virtual_tryon_model_runs/" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">53</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">FASHN VTON v1.5: Apache-2.0 virtual try-on model, runs on consumer GPUs (~8GB VRAM), ~1B params</h3>
+                <h4 class="card-title-zh">FASHN VTON v1.5：基于Apache-2.0协议的虚拟试穿模型，可在消费级GPU（约8GB显存）上运行，参数量约10亿。</h4>
+            </div>
+
+            <div class="card-meta">about 9 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">We just open-sourced FASHN VTON v1.5, a virtual try-on model that generates photorealistic images of people wearing garments. We've been running this as a production API for the past year, and now we're releasing the weights and inference code under Apache-2.0.</div>
+                <div class="card-snippet-zh">我们刚刚开源了FASHN VTON v1.5，这是一个能生成真人试穿服装照片级图像的虚拟试衣模型。过去一年我们已将其作为生产级API运行，现在依据Apache-2.0协议正式发布模型权重与推理代码。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpkem2/image_generation_is_now_available_alongside_llms/" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">50</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Image generation is now available alongside LLMs and Whisper in Lemonade v9.2</h3>
+                <h4 class="card-title-zh">在Lemonade v9.2版本中，图像生成功能现已与LLM和Whisper同步推出。</h4>
+            </div>
+
+            <div class="card-meta">about 5 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">We're on a mission to make local generative AI supremely easy for users and devs. Today, Lemonade has taken a big step by introducing image generation into our unified local API.</div>
+                <div class="card-snippet-zh">我们致力于让本地生成式AI对用户和开发者变得极其简单易用。今天，Lemonade迈出了重要一步，将图像生成功能整合进我们统一的本地API中。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpneiq/amd_strix_halo_gmtek_128gb_unified_rocks/" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">47</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AMD Strix Halo GMTEK 128GB Unified ROCKS!</h3>
+                <h4 class="card-title-zh">AMD Strix Halo GMTEK 128GB统一内存架构性能卓越！</h4>
+            </div>
+
+            <div class="card-meta">about 3 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">I've been running a MAX+ 395 as my daily workstation — the unified memory architecture</div>
+                <div class="card-snippet-zh">我一直将MAX+ 395作为日常工作站使用——其统一内存架构</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpllhm/acestep_15_dropping_in_days_commercial_grade_oss/" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">44</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">ACE-Step 1.5 dropping in days - "Commercial grade OSS music gen" with quality between Suno v4.5 and v5 (8GB VRAM)</h3>
+                <h4 class="card-title-zh">ACE-Step 1.5版本即将在数日内发布——这是一款"商用级开源音乐生成模型"，其音质表现介于Suno v4.5与v5版本之间（仅需8GB显存）。</h4>
+            </div>
+
+            <div class="card-meta">about 4 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">For those who haven't been following the AI music generation space, ACE-Step is about to have its "Stable Diffusion moment."</div>
+                <div class="card-snippet-zh">对于尚未关注AI音乐生成领域的人来说，ACE-Step即将迎来它的"Stable Diffusion时刻"。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpjc4a/add_selfspeculative_decoding_no_draft_model/" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">41</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Add self‑speculative decoding (no draft model required) by srogmann · Pull Request #18471 · ggml-org/llama.cpp</h3>
+                <h4 class="card-title-zh">由srogmann提交的Pull Request #18471：为llama.cpp添加自推测解码功能（无需草稿模型）</h4>
+            </div>
+
+            <div class="card-meta">about 6 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">tl;dr: potential t/s boost for all (non-reasoning) models</div>
+                <div class="card-snippet-zh">简而言之：所有（非推理）模型均可能实现吞吐量/秒（t/s）提升。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qowfhi/arcee_ai_goes_allin_on_open_models_interconnects/" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">38</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Arcee AI goes all-in on open models -- Interconnects interview</h3>
+                <h4 class="card-title-zh">Arcee AI全力押注开源模型——Interconnects专访</h4>
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Arcee-AI has released their 400B-A13B model, as posted elsewhere on LL.</div>
+                <div class="card-snippet-zh">Arcee-AI已发布其400B-A13B模型，相关信息已在其他LL平台公布。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp98mj/sharing_my_set_of_distilled_small_language_models/" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">35</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Sharing my set of distilled small language models (3B) + training data in more than 50 low-resource languages</h3>
+                <h4 class="card-title-zh">分享我提炼出的一套小型语言模型（3B参数）及其在超过50种低资源语言上的训练数据集。</h4>
+            </div>
+
+            <div class="card-meta">about 12 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Peter Devine here. You might remember me from such projects as lb-reranker and Suzume.</div>
+                <div class="card-snippet-zh">我是彼得·德瓦恩。您可能通过lb-reranker和Suzume等项目对我有所了解。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qpgrlg/mimo_v2_flash_kimi_k25_how_chinese_models_are/" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">32</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">MiMo V2 Flash & Kimi K2.5: How Chinese Models Are Democratizing AI</h3>
+                <h4 class="card-title-zh">MiMo V2 Flash与Kimi K2.5：中国模型如何推动AI民主化</h4>
+            </div>
+
+            <div class="card-meta">about 7 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">For years, the AI narrative has been simple: OpenAI, Google, and Anthropic build the best models, everyone else catches up. You pay premium API prices, accept their terms, and hope your data stays private.</div>
+                <div class="card-snippet-zh">多年来，人工智能领域的故事线始终如一：OpenAI、谷歌和Anthropic打造顶尖模型，其他公司紧随其后。你支付高昂的API费用，接受它们的条款，并祈祷自己的数据能保持私密。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qp7so2/bailingmoe_ling17b_models_speed_is_better_now/" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">29</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">bailingmoe - Ling(17B) models' speed is better now</h3>
+                <h4 class="card-title-zh">bailingmoe - Ling(17B)模型的速度现在更好了</h4>
+            </div>
+
+            <div class="card-meta">about 14 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Useful for some people who uses these models.</div>
+                <div class="card-snippet-zh">对部分使用这些模型的用户来说很有用。</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/LocalLLaMA/comments/1qowq8r/deepseek_ocr_2/" target="_blank" class="card fade-in" style="animation-delay: 540ms">
+            <div class="card-header">
+                <div class="card-source">r/LocalLLaMA </div>
+                <div class="card-score" title="Importance Score">26</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Deepseek OCR 2</h3>
+                <h4 class="card-title-zh">深度求索 OCR 2</h4>
+            </div>
+
+            <div class="card-meta">about 23 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">Deepseek released a new OCR model: deepseek-ai/DeepSeek-OCR-2</div>
+                <div class="card-snippet-zh">深度求索发布了新的OCR模型：deepseek-ai/DeepSeek-OCR-2</div>
+            </div>
+        </a>
+    
+        <a href="https://www.reddit.com/r/ChatGPT/comments/1qpb0cf/bilbo_asks_chatgpt/" target="_blank" class="card fade-in" style="animation-delay: 570ms">
+            <div class="card-header">
+                <div class="card-source">r/ChatGPT </div>
+                <div class="card-score" title="Importance Score">70</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Bilbo asks chatgpt</h3>
+                <h4 class="card-title-zh">比尔博询问ChatGPT</h4>
+            </div>
+
+            <div class="card-meta">about 11 hours ago</div>
+            
+            
+            <div class="snippet-block">
+                <div class="card-snippet">submitted by    /u/Able_Environment1896   [link]   [comments]</div>
+                <div class="card-snippet-zh">由用户 /u/Able_Environment1896 提交 [链接] [评论]</div>
+            </div>
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+
+        <div id="tab-youtube" class="tab-content">
+            
+        <section>
+            <h2 class="section-header"><a href="https://www.youtube.com" target="_blank" class="section-link">YouTube</a></h2>
+            
+            <div class="category-briefing">
+                <h3>🔹 AlphaFold：AI结构生物学的革命性突破</h3>
+<p><strong>💡 技术核心</strong>：AlphaFold 是 DeepMind 开发的深度学习系统，能够以前所未有的精度预测蛋白质的三维空间结构，其准确度已达到实验水平，解决了困扰生物学界长达50年的“蛋白质折叠问题”。
+<strong>🚀 影响与意义</strong>：这一突破彻底改变了结构生物学和药物发现领域，极大加速了基础科学研究与新药研发进程，是人工智能赋能基础科学研究的典范，具有划时代的里程碑意义。</p>
+<hr>
+<h3>🔹 AI模拟与游戏中的复杂行为突破</h3>
+<p><strong>💡 技术核心</strong>：此类别涵盖多项AI在虚拟环境中解决复杂动态问题的进展。包括：AI攻克了被认为不可能的物理模拟难题；NVIDIA的AI实现了游戏中角色复杂、自然的行走控制；研究人员构建的微型经济系统被AI智能体迅速“玩坏”。
+<strong>🚀 影响与意义</strong>：这些进展展示了AI在理解和生成复杂、动态系统行为方面的强大能力，对于游戏开发、机器人训练、经济学与社会学仿真研究等领域具有深远影响，是迈向通用AI的重要一步。</p>
+<hr>
+<h3>🔹 DeepMind创意展示与工具更新</h3>
+<p><strong>💡 技术核心</strong>：这一系列内容聚焦DeepMind的创意产出与工具迭代。包括其创意项目《Dear Upstairs Neighbors》的预告片及幕后花絮；以及其多模态大模型Gemini的最新成员Gemini 1.5 Flash，展示了其在创造性UI设计和处理复杂、非结构化数据方面的快速推理能力。
+<strong>🚀 影响与意义</strong>：这体现了顶尖AI实验室在技术产品化与前沿探索上的平衡。一方面将AI能力封装为实用的生产力工具（如处理混乱数据），另一方面通过创意项目探索AI与艺术、人文的结合，拓宽AI的应用与影响力边界。</p>
+
+            </div>
+        
+            
+            <div class="grid">
+                
+        <a href="https://www.youtube.com/watch?v=9Mcv9vpGW5Q" target="_blank" class="card fade-in" style="animation-delay: 0ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">They Said It Was Impossible… This Simulation Solved It</h3>
+                <h4 class="card-title-zh">他们曾言此路不通……这场模拟却给出了答案</h4>
+            </div>
+
+            <div class="card-meta">4 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=_uo7CXd33Uc" target="_blank" class="card fade-in" style="animation-delay: 30ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">82</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">NVIDIA’s AI Finally Solved Walking In Games</h3>
+                <h4 class="card-title-zh">英伟达AI终在游戏中实现行走模拟。</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=KUekLTqV1ME" target="_blank" class="card fade-in" style="animation-delay: 60ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">79</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Researchers Built a Tiny Economy. AIs Broke It Immediately</h3>
+                <h4 class="card-title-zh">研究人员构建了一个微型经济体系，人工智能瞬间将其瓦解。</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=-ZFH4oJzCdU" target="_blank" class="card fade-in" style="animation-delay: 90ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">76</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">DeepMind’s New Game AI Just Made History</h3>
+                <h4 class="card-title-zh">DeepMind全新游戏AI创下历史性突破。</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/shorts/VQ2bV58QbH0" target="_blank" class="card fade-in" style="animation-delay: 120ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">73</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AlphaFold - The Most Important AI Breakthrough Ever Made</h3>
+                <h4 class="card-title-zh">AlphaFold——史上最重要的AI突破</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=Vhcwjzeukts" target="_blank" class="card fade-in" style="animation-delay: 150ms">
+            <div class="card-header">
+                <div class="card-source">Two Minute Papers </div>
+                <div class="card-score" title="Importance Score">70</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">AlphaFold - The Most Important AI Breakthrough Ever Made</h3>
+                <h4 class="card-title-zh">AlphaFold——史上最重要的AI突破</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=eCk5VFKKz08" target="_blank" class="card fade-in" style="animation-delay: 180ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">88</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">“Dear Upstairs Neighbors” (Trailer)</h3>
+                <h4 class="card-title-zh">《亲爱的楼上邻居》（预告片）</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/shorts/60_WPBkuqyA" target="_blank" class="card fade-in" style="animation-delay: 210ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">85</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">“Dear Upstairs Neighbors” (BTS)</h3>
+                <h4 class="card-title-zh">《亲爱的楼上邻居》（防弹少年团）</h4>
+            </div>
+
+            <div class="card-meta">2 days ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=z4x9fkbe8SI" target="_blank" class="card fade-in" style="animation-delay: 240ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">82</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Creative UI in a spark</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：创意界面，一触即发</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=1nd0CbaJD3E" target="_blank" class="card fade-in" style="animation-delay: 270ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">79</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Transform messy data</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：让杂乱数据焕然一新</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=bY_RarpUdUw" target="_blank" class="card fade-in" style="animation-delay: 300ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">76</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Evolve code faster</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：加速代码演进</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=XHhCZOk2WvY" target="_blank" class="card fade-in" style="animation-delay: 330ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">73</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Renders faster and efficiently</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：渲染更快速、更高效</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=DNPLK-MvoSg" target="_blank" class="card fade-in" style="animation-delay: 360ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">70</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Assist in real-time game play</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：实时游戏辅助</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=DfaRahn_dwo" target="_blank" class="card fade-in" style="animation-delay: 390ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">67</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Orchestrate a function call kitchen</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：编排函数调用厨房</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=ZtMEe3W0aP0" target="_blank" class="card fade-in" style="animation-delay: 420ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">64</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Generate a narrative of your journey</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：生成一段关于你旅程的叙述</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=f0TL0GG_lo8" target="_blank" class="card fade-in" style="animation-delay: 450ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">61</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">Gemini 3 Flash: Visual context in an instant</h3>
+                <h4 class="card-title-zh">Gemini 3 Flash：瞬间解析视觉语境</h4>
+            </div>
+
+            <div class="card-meta">about 1 month ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/shorts/ymPp7NBLgoA" target="_blank" class="card fade-in" style="animation-delay: 480ms">
+            <div class="card-header">
+                <div class="card-source">DeepMind </div>
+                <div class="card-score" title="Importance Score">58</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">What does ancient bridge building and AI have in common?</h3>
+                <h4 class="card-title-zh">古桥建造与人工智能有何共通之处？</h4>
+            </div>
+
+            <div class="card-meta">about 2 months ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=k_bHtx_e-SU" target="_blank" class="card fade-in" style="animation-delay: 510ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">95</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">China’s Next AI Shock Is Hardware</h3>
+                <h4 class="card-title-zh">中国下一轮AI冲击将来自硬件领域。</h4>
+            </div>
+
+            <div class="card-meta">about 9 hours ago</div>
+            
+            
+        </a>
+    
+        <a href="https://www.youtube.com/watch?v=Y3KLbc5DlRs" target="_blank" class="card fade-in" style="animation-delay: 540ms">
+            <div class="card-header">
+                <div class="card-source">OpenAI <span class="badge fire">🔥 Hot</span></div>
+                <div class="card-score" title="Importance Score">92</div>
+            </div>
+            
+            <div class="content-block">
+                <h3 class="card-title">How Corning Invented A New Fiber-Optic Cable For AI And Landed A $6 Billion Meta Deal</h3>
+                <h4 class="card-title-zh">康宁如何为AI发明新型光纤电缆并赢得600亿美元Meta大单</h4>
+            </div>
+
+            <div class="card-meta">1 day ago</div>
+            
+            
+        </a>
+    
+            </div>
+        </section>
+        
+        </div>
+    </main>
+
+    <script>
+        // Start Embedded Mode Check
+        if (window.self !== window.top) {
+            document.body.classList.add('embedded');
+        }
+
+        // Tab Logic
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
