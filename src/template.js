@@ -451,7 +451,8 @@ function generateHTML(data, history = []) {
     </header>
 
     <nav class="tab-nav">
-        <button class="tab-btn active" onclick="openTab('tab-hn')">Hacker News</button>
+        <button class="tab-btn active" onclick="openTab('tab-moltbook')">Moltbook</button>
+        <button class="tab-btn" onclick="openTab('tab-hn')">Hacker News</button>
         <button class="tab-btn" onclick="openTab('tab-github')">GitHub Trending</button>
         <button class="tab-btn" onclick="openTab('tab-hfPapers')">HF Papers</button>
         <button class="tab-btn" onclick="openTab('tab-hfBlog')">HF Blog</button>
@@ -462,7 +463,11 @@ function generateHTML(data, history = []) {
     </nav>
 
     <main>
-        <div id="tab-hn" class="tab-content active">
+        <div id="tab-moltbook" class="tab-content active">
+            ${renderSection('Moltbook', data.moltbook, 'moltbook', 'https://www.moltbook.com', data.briefings?.moltbook)}
+        </div>
+
+        <div id="tab-hn" class="tab-content">
             ${renderSection('Hacker News', data.hnStories, 'hn', 'https://news.ycombinator.com', data.briefings?.hn)}
         </div>
 

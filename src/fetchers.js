@@ -248,6 +248,53 @@ async function fetchGitHubTrending() {
     }
 }
 
+async function fetchMoltbook() {
+    try {
+        console.log('> Fetching Moltbook...');
+        // Moltbook has a public API that works without authentication
+        const { data } = await fetchWithRetry('https://www.moltbook.com/api/v1/posts?sort=hot&limit=20', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!data.success || !data.posts) {
+            console.warn('Moltbook API returned unexpected format');
+            return [];
+        }
+
+        const posts = data.posts.map(post => ({
+            title: post.title,
+            title_zh: '',
+            link: `https://www.moltbook.com/post/${post.id}`,
+            source: 'Moltbook',
+            date: post.created_at,
+            snippet: post.content ? post.content.slice(0, 300) + (post.content.length > 300 ? '...' : '') : '',
+            snippet_zh: '',
+            importance: 90,
+            votes: post.upvotes,
+            author: post.author?.name || 'Unknown',
+            submolt: post.submolt?.display_name || 'General'
+        }));
+
+        // Translate titles and descriptions
+        const enriched = await Promise.all(posts.map(async (post) => {
+            return {
+                ...post,
+                title_zh: await translateText(post.title),
+                snippet_zh: await translateText(post.snippet)
+            };
+        }));
+
+        console.log(`✓ Fetched Moltbook (${enriched.length} posts found)`);
+        return enriched;
+    } catch (error) {
+        console.error('Error fetching Moltbook:', error.message);
+        return [];
+    }
+}
+
 async function fetchCategory(categoryKey) {
     if (!RSS_FEEDS[categoryKey]) return [];
     console.log(`> Fetching ${categoryKey}...`);
@@ -259,6 +306,9 @@ async function fetchCategory(categoryKey) {
 }
 
 async function fetchSource(key) {
+    if (key === 'moltbook') {
+        return fetchMoltbook();
+    }
     if (key === 'hn') {
         const data = await fetchHackerNews();
         console.log('✓ Fetched Hacker News');
@@ -270,6 +320,6 @@ async function fetchSource(key) {
     return fetchCategory(key);
 }
 
-const SOURCE_KEYS = ['hn', 'github', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
+const SOURCE_KEYS = ['moltbook', 'hn', 'github', 'hfPapers', 'hfBlog', 'productHunt', 'reddit', 'youtube', 'researchBlogs'];
 
 module.exports = { fetchSource, SOURCE_KEYS };
