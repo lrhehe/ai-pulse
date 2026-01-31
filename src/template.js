@@ -512,6 +512,8 @@ function generateHTML(data, history = []) {
                     btn.classList.add('active');
                 }
             });
+            // Scroll to top when switching tabs
+            window.scrollTo(0, 0);
         }
     </script>
 </body>
